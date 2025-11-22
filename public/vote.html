@@ -483,7 +483,7 @@
     This board is for open, public ideas only. Do not submit confidential, patented or legally sensitive material.
   </footer>
 
-  <script>
+    <script>
     const API_BASE = "";
     const ideaListEl = document.getElementById("idea-list");
     const ideaCountEl = document.getElementById("idea-count");
@@ -574,8 +574,8 @@
 
         const main = document.createElement("div");
         main.className = "idea-main";
-        
-        // Show ID at top of card for admin use
+
+        // 🔹 NEW: show ID at top of card
         const idEl = document.createElement("div");
         idEl.className = "idea-id";
         idEl.textContent = "ID #" + idea.id;
@@ -702,5 +702,6 @@
       loadIdeas();
     });
   </script>
+
 </body>
 </html>
