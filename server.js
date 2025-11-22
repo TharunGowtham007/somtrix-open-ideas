@@ -30,24 +30,22 @@ const db = new sqlite3.Database(dbPath, (err) => {
 
 // Create ideas table
 db.serialize(() => {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS ideas (
+    db.run(`
+    CREATE TABLE IF NOT EXISTS idea_votes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      author TEXT,
-      title TEXT NOT NULL,
-      problem TEXT NOT NULL,
-      solution_hint TEXT NOT NULL,
-      votes INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      idea_id INTEGER NOT NULL,
+      fingerprint TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(idea_id, fingerprint)
     )
   `, (err) => {
     if (err) {
-      console.error('Failed to create ideas table', err);
+      console.error("Failed to create idea_votes table", err);
     } else {
-      console.log('Ideas table is ready');
+      console.log("idea_votes table is ready");
     }
   });
-});
+
 
 // Helpers for sort/search
 function buildIdeasQuery(params) {
@@ -116,34 +114,73 @@ app.post('/api/ideas', (req, res) => {
   stmt.finalize();
 });
 
-// Vote for an idea
-app.post('/api/ideas/:id/vote', (req, res) => {
+// Strong anti-spam voting: one vote per browser token (unique)
+app.post("/api/ideas/:id/vote", (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) {
-    return res.status(400).json({ error: 'Invalid idea id' });
+    return res.status(400).json({ error: "Invalid idea id" });
   }
 
+  // Browser token from frontend (preferred)
+  let browserToken = req.headers["x-voter-token"];
+  if (Array.isArray(browserToken)) browserToken = browserToken[0];
+
+  // Fallback: create fingerprint if no token
+  const ua = req.headers["user-agent"] || "";
+  const xff = req.headers["x-forwarded-for"];
+  const ip = typeof xff === "string"
+    ? xff.split(",")[0].trim()
+    : (req.socket && req.socket.remoteAddress) || "";
+
+  const fingerprint =
+    (typeof browserToken === "string" && browserToken.trim()) ||
+    `${ip}|${ua}`;
+
+  // Insert vote record (unique pair: idea_id + fingerprint)
   db.run(
-    'UPDATE ideas SET votes = votes + 1 WHERE id = ?',
-    [id],
+    "INSERT INTO idea_votes (idea_id, fingerprint) VALUES (?, ?)",
+    [id, fingerprint],
     function (err) {
       if (err) {
-        console.error('Error updating votes', err);
-        return res.status(500).json({ error: 'Failed to support idea' });
-      }
-      if (this.changes === 0) {
-        return res.status(404).json({ error: 'Idea not found' });
-      }
-      db.get('SELECT * FROM ideas WHERE id = ?', [id], (err2, row) => {
-        if (err2) {
-          console.error('Error fetching updated idea', err2);
-          return res.status(500).json({ error: 'Idea updated but failed to reload' });
+        // UNIQUE constraint = already voted
+        if (err.code === "SQLITE_CONSTRAINT") {
+          console.log("Blocked duplicate vote:", fingerprint);
+          return res.status(200).json({ alreadyVoted: true });
         }
-        res.json(row);
-      });
+
+        console.error("Error inserting vote record", err);
+        return res.status(500).json({ error: "Failed to support idea" });
+      }
+
+      // First time voting → increment idea's vote count
+      db.run(
+        "UPDATE ideas SET votes = votes + 1 WHERE id = ?",
+        [id],
+        function (err2) {
+          if (err2) {
+            console.error("Error updating votes", err2);
+            return res.status(500).json({ error: "Failed to update votes" });
+          }
+          if (this.changes === 0) {
+            return res.status(404).json({ error: "Idea not found" });
+          }
+
+          // Return updated idea
+          db.get("SELECT * FROM ideas WHERE id = ?", [id], (err3, row) => {
+            if (err3) {
+              console.error("Error loading updated idea", err3);
+              return res
+                .status(500)
+                .json({ error: "Idea updated but could not reload" });
+            }
+            res.json(row);
+          });
+        }
+      );
     }
   );
 });
+
 
 // Health check
 app.get('/health', (req, res) => {
