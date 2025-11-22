@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SomTriX – Vote on Ideas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --dark-titanium: #2C3E50;
+      --titanium-gray: #34495E;
+      --soft-blue: #7F8CBD;
+      --light-titanium: #BDC3C7;
+      --off-white: #ECF0F1;
+
+      --bg-page-top: #eef2fb;
+      --bg-page-mid: #dfe7ff;
+      --bg-page-bottom: #f4f7fb;
+
+      --surface-main: #ffffff;
+      --surface-soft: #f7f9ff;
+
+      --border-soft: #dde4f1;
+      --text-main: #11141c;
+      --text-soft: #6c7689;
+      --text-softest: #9ba3b6;
+
+      --accent-blue: #7F8CBD;
+      --accent-blue-deep: #5f6ea8;
+
+      --radius-xl: 30px;
+      --radius-lg: 22px;
+      --radius-md: 14px;
+      --radius-pill: 999px;
+
+      --shadow-soft: 0 18px 40px rgba(22, 34, 54, 0.12);
+      --shadow-strong: 0 26px 64px rgba(16, 25, 40, 0.18);
+
+      --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        "Inter", sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-sans);
+      background: linear-gradient(
+        145deg,
+        var(--bg-page-top) 0,
+        var(--bg-page-mid) 40%,
+        var(--bg-page-bottom) 100%
+      );
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .page-shell {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 20px 16px 40px;
+    }
+
+    /* HEADER */
+
+    .top-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .brand-block {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-logo {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.16);
+    }
+
+    .brand-logo img {
+      width: 230%;
+      height: 230%;
+      object-fit: cover;
+      display: block;
+      background: transparent;
+    }
+
+    .brand-logo span {
+      font-weight: 800;
+      font-size: 26px;
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .brand-name {
+      font-size: 20px;
+      font-weight: 760;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--dark-titanium);
+    }
+
+    .brand-tagline {
+      font-size: 13px;
+      color: var(--text-soft);
+    }
+
+    .header-links {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 12px;
+      align-items: flex-end;
+    }
+
+    .header-link {
+      color: var(--soft-blue);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      cursor: pointer;
+    }
+
+    @media (max-width: 720px) {
+      .top-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .header-links {
+        align-items: flex-start;
+      }
+    }
+
+    /* CONTENT */
+
+    .main-card {
+      border-radius: 26px;
+      background: var(--surface-main);
+      border: 1px solid var(--border-soft);
+      box-shadow: var(--shadow-soft);
+      padding: 20px 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .title {
+      font-size: 22px;
+      font-weight: 750;
+      margin-bottom: 4px;
+      color: var(--dark-titanium);
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: var(--text-soft);
+      margin-bottom: 4px;
+    }
+
+    .toolbar {
+      margin-top: 6px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 11px;
+      color: var(--text-softest);
+    }
+
+    .controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .search {
+      padding: 6px 10px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border-soft);
+      background: var(--surface-soft);
+      color: var(--text-main);
+      font-size: 11px;
+      min-width: 0;
+    }
+
+    .search::placeholder {
+      color: var(--text-softest);
+    }
+
+    .sort {
+      padding: 6px 10px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border-soft);
+      background: #ffffff;
+      color: var(--text-softest);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+    }
+
+    .ideas-count {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border-soft);
+      background: var(--surface-soft);
+      color: var(--text-soft);
+    }
+
+    .ideas-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+    }
+
+    .idea-card {
+      background: var(--surface-soft);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-soft);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 220px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.04);
+      transition: box-shadow 0.16s ease-out,
+        transform 0.16s ease-out,
+        border-color 0.16s ease-out,
+        background 0.16s ease-out;
+    }
+
+    .idea-card:hover {
+      box-shadow: var(--shadow-strong);
+      transform: translateY(-3px);
+      border-color: var(--accent-blue);
+      background: #ffffff;
+    }
+
+    .idea-banner {
+      height: 80px;
+      background: linear-gradient(
+        140deg,
+        #7f8cbd 0,
+        #34495e 40%,
+        #2c3e50 100%
+      );
+      display: flex;
+      align-items: flex-end;
+      padding: 8px 10px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .idea-banner-tag {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      border-radius: var(--radius-pill);
+      padding: 3px 9px;
+      background: rgba(0, 0, 0, 0.78);
+      color: #ffffff;
+    }
+
+    .idea-banner-orb {
+      position: absolute;
+      right: -16px;
+      bottom: -20px;
+      width: 90px;
+      height: 90px;
+      border-radius: 30px;
+      background: rgba(255, 255, 255, 0.16);
+      transform: rotate(-16deg);
+    }
+
+    .idea-main {
+      padding: 9px 10px 7px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .idea-topline {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 3px;
+    }
+
+    .idea-author {
+      font-size: 11px;
+      color: var(--text-softest);
+    }
+
+    .idea-age {
+      font-size: 10px;
+      color: var(--text-softest);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .idea-title {
+      font-size: 13px;
+      font-weight: 650;
+      margin-bottom: 4px;
+    }
+
+    .idea-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-softest);
+      margin-top: 4px;
+      margin-bottom: 1px;
+    }
+
+    .idea-text {
+      font-size: 12px;
+      color: var(--text-soft);
+      line-height: 1.4;
+      max-height: 72px;
+      overflow: hidden;
+    }
+
+    .idea-footer {
+      padding: 7px 10px 8px;
+      border-top: 1px solid var(--border-soft);
+      background: #ffffff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .idea-footer-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-support {
+      padding: 4px 10px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--accent-blue-deep);
+      background: var(--accent-blue-deep);
+      color: #ffffff;
+      font-size: 11px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      cursor: pointer;
+      transition: background 0.16s ease-out,
+        transform 0.16s ease-out,
+        box-shadow 0.16s ease-out,
+        opacity 0.16s ease-out;
+    }
+
+    .btn-support span.icon {
+      font-size: 14px;
+      margin-top: -1px;
+    }
+
+    .btn-support:hover {
+      background: var(--accent-blue);
+      box-shadow: 0 12px 26px rgba(95, 110, 168, 0.32);
+      transform: translateY(-1px);
+    }
+
+    .btn-support:active {
+      transform: translateY(0);
+      box-shadow: 0 8px 18px rgba(95, 110, 168, 0.32);
+      opacity: 0.96;
+    }
+
+    .idea-votes {
+      font-size: 12px;
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    .idea-tags {
+      font-size: 10px;
+      color: var(--text-softest);
+      text-align: right;
+    }
+
+    .ideas-empty {
+      grid-column: 1 / -1;
+      padding: 16px 10px 14px;
+      border-radius: var(--radius-md);
+      border: 1px dashed var(--border-soft);
+      background: var(--surface-soft);
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-soft);
+    }
+
+    footer {
+      margin-top: auto;
+      padding: 14px 18px 18px;
+      font-size: 11px;
+      color: var(--text-softest);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="top-header">
+      <div class="brand-block">
+        <div class="brand-logo">
+          <img src="logo.png" alt="SomTriX logo"
+               onerror="this.style.display='none';this.parentElement.innerHTML='<span>ST</span>';">
+        </div>
+        <div class="brand-text">
+          <div class="brand-name">SomTriX</div>
+          <div class="brand-tagline">Browse & vote ideas</div>
+        </div>
+      </div>
+      <div class="header-links">
+        <a class="header-link" href="index.html">← Back to options</a>
+        <a class="header-link" href="publish.html">Publish an idea →</a>
+        <a class="header-link" href="how-it-works.html" target="_blank" rel="noopener">
+          How this board works
+        </a>
+      </div>
+    </header>
+
+    <main class="main-card">
+      <div>
+        <h1 class="title">Public ideas</h1>
+        <p class="subtitle">
+          Scroll through the ideas below and tap <strong>Support</strong> to vote for the ones you like.
+        </p>
+      </div>
+
+      <div class="toolbar">
+        <div>Search and sort to explore ideas.</div>
+        <div class="controls">
+          <input id="search" class="search" type="text" placeholder="Search by title or author..." />
+          <select id="sort" class="sort">
+            <option value="top">Top supported</option>
+            <option value="new">Newest first</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="ideas-count" id="idea-count">Loading ideas...</div>
+
+      <div id="idea-list" class="ideas-grid"></div>
+    </main>
+  </div>
+
+  <footer>
+    This board is for open, public ideas only. Do not submit confidential, patented or legally sensitive material.
+  </footer>
+
+  <script>
+    const API_BASE = "";
+    const ideaListEl = document.getElementById("idea-list");
+    const ideaCountEl = document.getElementById("idea-count");
+    const searchEl = document.getElementById("search");
+    const sortEl = document.getElementById("sort");
+
+    let ideas = [];
+
+    function getTimestamp(idea) {
+      if (typeof idea.created_at === "number") return idea.created_at;
+      const t = Date.parse(idea.created_at);
+      return isNaN(t) ? Date.now() : t;
+    }
+
+    function formatAge(idea) {
+      const ts = getTimestamp(idea);
+      const diffMs = Date.now() - ts;
+      const diffMin = Math.floor(diffMs / (1000 * 60));
+      if (diffMin < 1) return "Just now";
+      if (diffMin < 60) return diffMin + " min ago";
+      const diffH = Math.floor(diffMin / 60);
+      if (diffH < 24) return diffH + " h ago";
+      const diffD = Math.floor(diffH / 24);
+      if (diffD < 7) return diffD + " d ago";
+      const diffW = Math.floor(diffD / 7);
+      return diffW + " w ago";
+    }
+
+    function updateIdeaCount() {
+      const count = ideas.length;
+      if (count === 0) ideaCountEl.textContent = "No ideas yet — be the first to publish.";
+      else if (count === 1) ideaCountEl.textContent = "1 public idea";
+      else ideaCountEl.textContent = count + " public ideas";
+    }
+
+    function renderIdeas() {
+      const q = (searchEl.value || "").trim().toLowerCase();
+      const sort = sortEl.value || "top";
+
+      let filtered = ideas.filter((idea) => {
+        if (!q) return true;
+        return (
+          (idea.title || "").toLowerCase().includes(q) ||
+          (idea.author || "").toLowerCase().includes(q)
+        );
+      });
+
+      if (sort === "new") {
+        filtered.sort((a, b) => getTimestamp(b) - getTimestamp(a));
+      } else {
+        filtered.sort((a, b) => {
+          if ((b.votes || 0) !== (a.votes || 0))
+            return (b.votes || 0) - (a.votes || 0);
+          return getTimestamp(b) - getTimestamp(a);
+        });
+      }
+
+      ideaListEl.innerHTML = "";
+
+      if (filtered.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "ideas-empty";
+        empty.textContent =
+          ideas.length === 0
+            ? "No ideas yet. Ask someone to publish using the Publish page."
+            : "No ideas match your search. Try another keyword.";
+        ideaListEl.appendChild(empty);
+        updateIdeaCount();
+        return;
+      }
+
+      filtered.forEach((idea) => {
+        const card = document.createElement("article");
+        card.className = "idea-card";
+
+        const banner = document.createElement("div");
+        banner.className = "idea-banner";
+
+        const tag = document.createElement("div");
+        tag.className = "idea-banner-tag";
+        tag.textContent = "Idea";
+
+        const orb = document.createElement("div");
+        orb.className = "idea-banner-orb";
+
+        banner.appendChild(tag);
+        banner.appendChild(orb);
+
+        const main = document.createElement("div");
+        main.className = "idea-main";
+
+        const topline = document.createElement("div");
+        topline.className = "idea-topline";
+
+        const authorEl = document.createElement("div");
+        authorEl.className = "idea-author";
+        const authorName = (idea.author || "").trim() || "Anonymous";
+        authorEl.textContent = "By " + authorName;
+
+        const ageEl = document.createElement("div");
+        ageEl.className = "idea-age";
+        ageEl.textContent = formatAge(idea);
+
+        topline.appendChild(authorEl);
+        topline.appendChild(ageEl);
+
+        const titleEl = document.createElement("div");
+        titleEl.className = "idea-title";
+        titleEl.textContent = idea.title;
+
+        const problemLabel = document.createElement("div");
+        problemLabel.className = "idea-label";
+        problemLabel.textContent = "Problem";
+
+        const problemText = document.createElement("div");
+        problemText.className = "idea-text";
+        problemText.textContent = idea.problem;
+
+        const solutionLabel = document.createElement("div");
+        solutionLabel.className = "idea-label";
+        solutionLabel.textContent = "Solution hint";
+
+        const solutionText = document.createElement("div");
+        solutionText.className = "idea-text";
+        solutionText.textContent = idea.solution_hint;
+
+        main.appendChild(topline);
+        main.appendChild(titleEl);
+        main.appendChild(problemLabel);
+        main.appendChild(problemText);
+        main.appendChild(solutionLabel);
+        main.appendChild(solutionText);
+
+        const footer = document.createElement("div");
+        footer.className = "idea-footer";
+
+        const left = document.createElement("div");
+        left.className = "idea-footer-left";
+
+        const supportBtn = document.createElement("button");
+        supportBtn.className = "btn-support";
+        supportBtn.type = "button";
+        supportBtn.innerHTML = '<span class="icon">❤</span><span>Support</span>';
+        supportBtn.addEventListener("click", () => handleVote(idea.id));
+
+        const votesEl = document.createElement("div");
+        votesEl.className = "idea-votes";
+        votesEl.textContent = (idea.votes || 0) + " supports";
+
+        left.appendChild(supportBtn);
+        left.appendChild(votesEl);
+
+        const tags = document.createElement("div");
+        tags.className = "idea-tags";
+        tags.textContent = (idea.votes || 0) > 0 ? "Public · Active" : "Public · New";
+
+        footer.appendChild(left);
+        footer.appendChild(tags);
+
+        card.appendChild(banner);
+        card.appendChild(main);
+        card.appendChild(footer);
+
+        ideaListEl.appendChild(card);
+      });
+
+      updateIdeaCount();
+    }
+
+    async function loadIdeas() {
+      ideaCountEl.textContent = "Loading ideas...";
+      try {
+        const params = new URLSearchParams();
+        const sort = sortEl.value || "top";
+        const q = (searchEl.value || "").trim();
+        if (sort) params.append("sort", sort);
+        if (q) params.append("search", q);
+
+        const res = await fetch(`${API_BASE}/api/ideas?${params.toString()}`);
+        if (!res.ok) throw new Error("Failed to fetch ideas");
+        ideas = await res.json();
+        renderIdeas();
+      } catch (err) {
+        console.error(err);
+        ideaCountEl.textContent = "Failed to load ideas.";
+        ideaListEl.innerHTML =
+          '<div class="ideas-empty">Unable to load ideas right now. Please refresh later.</div>';
+      }
+    }
+
+    async function handleVote(id) {
+      try {
+        const res = await fetch(`${API_BASE}/api/ideas/${id}/vote`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (!res.ok) throw new Error("Failed to support idea");
+        const updated = await res.json();
+        ideas = ideas.map((i) => (i.id === updated.id ? updated : i));
+        renderIdeas();
+      } catch (err) {
+        console.error(err);
+        alert("Unable to register your support right now. Please try again.");
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      searchEl.addEventListener("input", loadIdeas);
+      sortEl.addEventListener("change", loadIdeas);
+      loadIdeas();
+    });
+  </script>
+</body>
+</html>

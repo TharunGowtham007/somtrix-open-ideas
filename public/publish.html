@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SomTriX – Publish an Idea</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --dark-titanium: #2C3E50;
+      --titanium-gray: #34495E;
+      --soft-blue: #7F8CBD;
+      --light-titanium: #BDC3C7;
+      --off-white: #ECF0F1;
+
+      --bg-page-top: #eef2fb;
+      --bg-page-mid: #dfe7ff;
+      --bg-page-bottom: #f4f7fb;
+
+      --surface-main: #ffffff;
+      --surface-soft: #f7f9ff;
+
+      --border-soft: #dde4f1;
+      --border-strong: #c5d0e2;
+
+      --text-main: #11141c;
+      --text-soft: #6c7689;
+      --text-softest: #9ba3b6;
+
+      --accent-blue: #7F8CBD;
+      --accent-blue-deep: #5f6ea8;
+
+      --radius-xl: 30px;
+      --radius-lg: 22px;
+      --radius-md: 14px;
+      --radius-pill: 999px;
+
+      --shadow-soft: 0 18px 40px rgba(22, 34, 54, 0.12);
+      --shadow-strong: 0 26px 64px rgba(16, 25, 40, 0.18);
+
+      --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        "Inter", sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-sans);
+      background: linear-gradient(
+        145deg,
+        var(--bg-page-top) 0,
+        var(--bg-page-mid) 40%,
+        var(--bg-page-bottom) 100%
+      );
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .page-shell {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 20px 16px 40px;
+    }
+
+    /* HEADER */
+
+    .top-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .brand-block {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-logo {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.16);
+    }
+
+    .brand-logo img {
+      width: 230%;
+      height: 230%;
+      object-fit: cover;
+      display: block;
+      background: transparent;
+    }
+
+    .brand-logo span {
+      font-weight: 800;
+      font-size: 26px;
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .brand-name {
+      font-size: 20px;
+      font-weight: 760;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--dark-titanium);
+    }
+
+    .brand-tagline {
+      font-size: 13px;
+      color: var(--text-soft);
+    }
+
+    .header-links {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 12px;
+      align-items: flex-end;
+    }
+
+    .header-link {
+      color: var(--soft-blue);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      cursor: pointer;
+    }
+
+    @media (max-width: 720px) {
+      .top-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .header-links {
+        align-items: flex-start;
+      }
+    }
+
+    /* CONTENT */
+
+    .main-card {
+      border-radius: 26px;
+      background: var(--surface-main);
+      border: 1px solid var(--border-soft);
+      box-shadow: var(--shadow-soft);
+      padding: 20px 18px 20px;
+    }
+
+    .title {
+      font-size: 22px;
+      font-weight: 750;
+      margin-bottom: 4px;
+      color: var(--dark-titanium);
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: var(--text-soft);
+      margin-bottom: 10px;
+    }
+
+    .warning {
+      margin-bottom: 12px;
+      padding: 9px 10px;
+      border-radius: var(--radius-md);
+      border: 1px dashed var(--border-strong);
+      background: var(--surface-soft);
+      font-size: 11px;
+      color: var(--text-soft);
+      line-height: 1.5;
+    }
+
+    .warning strong { color: var(--text-main); }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-softest);
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    input[type="text"],
+    textarea {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-soft);
+      background: var(--surface-soft);
+      color: var(--text-main);
+      font-size: 13px;
+      outline: none;
+      resize: vertical;
+      min-height: 40px;
+      transition: border-color 0.16s ease-out,
+        box-shadow 0.16s ease-out,
+        background 0.16s ease-out,
+        transform 0.16s ease-out;
+    }
+
+    textarea { min-height: 80px; }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: var(--text-softest);
+    }
+
+    input:focus,
+    textarea:focus {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 1px rgba(127, 140, 189, 0.25);
+      background: #ffffff;
+      transform: translateY(-1px);
+    }
+
+    .field-hint {
+      font-size: 11px;
+      color: var(--text-softest);
+      margin-top: 2px;
+    }
+
+    .status-error,
+    .status-success {
+      margin-top: 6px;
+      padding: 6px 8px;
+      border-radius: var(--radius-md);
+      font-size: 11px;
+      display: none;
+    }
+
+    .status-error {
+      background: #fff0f0;
+      border: 1px solid #ff6b6b;
+      color: #b30018;
+    }
+
+    .status-success {
+      background: #efffed;
+      border: 1px solid #4cd964;
+      color: #1e7a32;
+    }
+
+    .status-visible { display: block !important; }
+
+    .submit-footer {
+      margin-top: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .submit-footer-note {
+      font-size: 10px;
+      color: var(--text-soft);
+    }
+
+    button {
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      padding: 8px 18px;
+      border-radius: var(--radius-pill);
+      background: var(--accent-blue-deep);
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      box-shadow: 0 16px 34px rgba(95, 110, 168, 0.35);
+      transition: background 0.16s ease-out,
+        transform 0.16s ease-out,
+        box-shadow 0.16s ease-out,
+        opacity 0.16s ease-out;
+    }
+
+    .btn-primary span.icon {
+      font-size: 14px;
+      margin-top: -1px;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-blue);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-strong);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+      box-shadow: 0 12px 26px rgba(95, 110, 168, 0.4);
+      opacity: 0.96;
+    }
+
+    .btn-primary[disabled] {
+      opacity: 0.7;
+      cursor: wait;
+    }
+
+    footer {
+      margin-top: auto;
+      padding: 14px 18px 18px;
+      font-size: 11px;
+      color: var(--text-softest);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="top-header">
+      <div class="brand-block">
+        <div class="brand-logo">
+          <img src="logo.png" alt="SomTriX logo"
+               onerror="this.style.display='none';this.parentElement.innerHTML='<span>ST</span>';">
+        </div>
+        <div class="brand-text">
+          <div class="brand-name">SomTriX</div>
+          <div class="brand-tagline">Publish an idea</div>
+        </div>
+      </div>
+      <div class="header-links">
+        <a class="header-link" href="index.html">← Back to options</a>
+        <a class="header-link" href="vote.html">Go to voting →</a>
+        <a class="header-link" href="how-it-works.html" target="_blank" rel="noopener">
+          How this board works
+        </a>
+      </div>
+    </header>
+
+    <main class="main-card">
+      <h1 class="title">Submit a public idea</h1>
+      <p class="subtitle">
+        Describe a real-world problem and a high-level solution hint. Your idea will appear on the public SomTriX board.
+      </p>
+
+      <div class="warning">
+        <strong>Reminder:</strong> This board is public. Share the problem and idea direction only.
+        Do <strong>not</strong> post code, secret algorithms, or anything you want to keep private.
+      </div>
+
+      <form id="idea-form">
+        <div>
+          <label for="author">Your name (optional)</label>
+          <input
+            id="author"
+            type="text"
+            name="author"
+            placeholder="e.g. Tharun G."
+            maxlength="60"
+          />
+        </div>
+
+        <div>
+          <label for="title">Idea title *</label>
+          <input
+            id="title"
+            type="text"
+            name="title"
+            placeholder="Short, clear title everyone can understand"
+            maxlength="160"
+            required
+          />
+          <div class="field-hint">
+            Example: “Smart neighborhood bin that rewards correct recycling.”
+          </div>
+        </div>
+
+        <div>
+          <label for="problem">Problem *</label>
+          <textarea
+            id="problem"
+            name="problem"
+            placeholder="What is the exact problem? Who faces it and in what situation?"
+            maxlength="1000"
+            required
+          ></textarea>
+        </div>
+
+        <div>
+          <label for="solution_hint">Solution hint (high-level only) *</label>
+          <textarea
+            id="solution_hint"
+            name="solution_hint"
+            placeholder="Give the direction, not the full recipe. What kind of solution might work?"
+            maxlength="600"
+            required
+          ></textarea>
+          <div class="field-hint">
+            Example: “Basic sensors + simple mobile rewards. Focus on visible progress and habit-building.”
+          </div>
+        </div>
+
+        <div class="status-error" id="form-error"></div>
+        <div class="status-success" id="form-success">
+          Your idea is now live on the SomTriX public board. Thank you for contributing.
+        </div>
+
+        <div class="submit-footer">
+          <div class="submit-footer-note">
+            By posting, you confirm that this idea text is okay to be <strong>public</strong>.
+          </div>
+          <button type="submit" class="btn-primary" id="submit-btn">
+            <span class="icon">↑</span>
+            <span>Post idea</span>
+          </button>
+        </div>
+      </form>
+    </main>
+  </div>
+
+  <footer>
+    This board is for open, public ideas only. Do not submit confidential, patented or legally sensitive material.
+  </footer>
+
+  <script>
+    const API_BASE = "";
+
+    const formEl = document.getElementById("idea-form");
+    const errorEl = document.getElementById("form-error");
+    const successEl = document.getElementById("form-success");
+    const submitBtn = document.getElementById("submit-btn");
+
+    function setStatus({ error = "", success = "" }) {
+      if (error) {
+        errorEl.textContent = error;
+        errorEl.classList.add("status-visible");
+      } else {
+        errorEl.classList.remove("status-visible");
+      }
+      if (success) {
+        successEl.textContent = success;
+        successEl.classList.add("status-visible");
+      } else {
+        successEl.classList.remove("status-visible");
+      }
+    }
+
+    async function handleSubmit(e) {
+      e.preventDefault();
+      setStatus({ error: "", success: "" });
+
+      const author = (formEl.author.value || "").trim();
+      const title = (formEl.title.value || "").trim();
+      const problem = (formEl.problem.value || "").trim();
+      const solution_hint = (formEl.solution_hint.value || "").trim();
+
+      if (!title || !problem || !solution_hint) {
+        setStatus({ error: "Please fill in all required fields marked with *." });
+        return;
+      }
+
+      submitBtn.disabled = true;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/ideas`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ author, title, problem, solution_hint }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to submit idea");
+        }
+        await res.json();
+        formEl.reset();
+        setStatus({
+          success: "Your idea has been published publicly on the SomTriX board.",
+        });
+      } catch (err) {
+        console.error(err);
+        setStatus({ error: err.message || "Something went wrong. Try again." });
+      } finally {
+        submitBtn.disabled = false;
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      formEl.addEventListener("submit", handleSubmit);
+    });
+  </script>
+</body>
+</html>
