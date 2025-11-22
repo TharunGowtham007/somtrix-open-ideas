@@ -158,6 +158,44 @@ app.get('/', (req, res) => {
 // Use PORT environment variable for Render
 const PORT = process.env.PORT || 3000;
 
+// ==========================
+// ADMIN ACCESS
+// ==========================
+const ADMIN_KEY = process.env.ADMIN_KEY || "SomTriX-Admin-Key-2025";
+
+// Middleware to check admin key
+function requireAdmin(req, res, next) {
+  const key = req.query.admin_key || req.headers["x-admin-key"];
+  if (!key || key !== ADMIN_KEY) {
+    return res.status(403).json({ error: "Admin access denied" });
+  }
+  next();
+}
+
+// Shared handler for deleting an idea by ID (for GET + DELETE)
+function adminDeleteIdeaHandler(req, res) {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) {
+    return res.status(400).json({ error: "Invalid idea ID" });
+  }
+
+  db.run("DELETE FROM ideas WHERE id = ?", [id], function (err) {
+    if (err) {
+      console.error("Error deleting idea", err);
+      return res.status(500).json({ error: "Error deleting idea" });
+    }
+    if (this.changes === 0) {
+      return res.status(404).json({ error: "Idea not found" });
+    }
+    res.json({ success: true, deletedId: id });
+  });
+}
+
+// Allow DELETE (for tools) and GET (for browser) to delete ideas
+app.delete("/api/admin/ideas/:id", requireAdmin, adminDeleteIdeaHandler);
+app.get("/api/admin/ideas/:id", requireAdmin, adminDeleteIdeaHandler);
+
+
 app.listen(PORT, () => {
   console.log(`SomTriX ideas board listening on port ${PORT}`);
 });
