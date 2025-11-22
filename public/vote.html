@@ -323,6 +323,13 @@
       font-weight: 650;
       margin-bottom: 4px;
     }
+    .idea-id {
+      font-size: 10px;
+      color: var(--text-softest);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 3px;
+    }
 
     .idea-label {
       font-size: 10px;
@@ -567,6 +574,12 @@
 
         const main = document.createElement("div");
         main.className = "idea-main";
+        
+        // Show ID at top of card for admin use
+        const idEl = document.createElement("div");
+        idEl.className = "idea-id";
+        idEl.textContent = "ID #" + idea.id;
+        main.appendChild(idEl);
 
         const topline = document.createElement("div");
         topline.className = "idea-topline";
