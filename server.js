@@ -65,6 +65,165 @@ db.serialize(() => {
     }
   });
 });
+// ---------------------------
+// Auto-restore from GitHub backups (if DB empty)
+// ---------------------------
+
+// Configuration — change only if your repo is different
+const GITHUB_OWNER = "TharunGowtham007";   // <-- change if your GitHub username differs
+const GITHUB_REPO  = "somtrix-open-ideas"; // <-- change if repo name differs
+const GITHUB_BACKUPS_PATH = "backups"; // folder in repo
+const GITHUB_API_LIST_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_BACKUPS_PATH}`;
+
+// Helper: sleep for ms
+function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+async function autoRestoreIfEmpty() {
+  try {
+    // 1) Check if ideas table has rows
+    db.get("SELECT COUNT(*) AS cnt FROM ideas", async (err, row) => {
+      if (err) {
+        console.error("[autoRestore] failed to check ideas count:", err);
+        return;
+      }
+      const count = (row && row.cnt) ? row.cnt : 0;
+      console.log(`[autoRestore] ideas count = ${count}`);
+      if (count > 0) {
+        console.log("[autoRestore] DB already has ideas — skipping restore.");
+        return;
+      }
+
+      console.log("[autoRestore] DB empty — attempting to fetch latest backup from GitHub.");
+
+      // 2) List files in backups folder via GitHub API
+      let listRes;
+      try {
+        listRes = await fetch(GITHUB_API_LIST_URL, { headers: { 'Accept': 'application/vnd.github.v3+json' } });
+      } catch (fetchErr) {
+        console.error("[autoRestore] Failed to fetch GitHub contents:", fetchErr);
+        return;
+      }
+
+      if (!listRes.ok) {
+        console.error("[autoRestore] GitHub contents API returned non-ok:", listRes.status, await listRes.text().catch(()=>"(no body)"));
+        return;
+      }
+
+      const files = await listRes.json();
+      if (!Array.isArray(files) || files.length === 0) {
+        console.log("[autoRestore] No backup files found in backups/ folder.");
+        return;
+      }
+
+      // 3) Pick the latest backup file by filename (timestamped names sort lexicographically)
+      files.sort((a, b) => {
+        if (!a.name || !b.name) return 0;
+        return a.name < b.name ? 1 : -1; // descending: newest first
+      });
+
+      const latest = files[0];
+      if (!latest || !latest.download_url) {
+        console.log("[autoRestore] No download URL found for latest file:", latest && latest.name);
+        return;
+      }
+
+      console.log("[autoRestore] Found latest backup:", latest.name);
+
+      // 4) Download the backup file
+      let fileRes;
+      try {
+        fileRes = await fetch(latest.download_url);
+      } catch (err2) {
+        console.error("[autoRestore] Failed to download backup file:", err2);
+        return;
+      }
+
+      if (!fileRes.ok) {
+        console.error("[autoRestore] Backup file download failed:", fileRes.status);
+        return;
+      }
+
+      const text = await fileRes.text();
+      let items;
+      try {
+        items = JSON.parse(text);
+      } catch (parseErr) {
+        console.error("[autoRestore] Failed to parse JSON from backup file:", parseErr);
+        return;
+      }
+
+      if (!Array.isArray(items) || items.length === 0) {
+        console.log("[autoRestore] Backup JSON empty or invalid.");
+        return;
+      }
+
+      console.log(`[autoRestore] Restoring ${items.length} ideas into DB (deduping by title + created_at).`);
+
+      // 5) Insert items into DB, dedupe by (title + created_at)
+      const inserted = [];
+      const skipped = [];
+
+      db.serialize(() => {
+        const stmt = db.prepare(`
+          INSERT INTO ideas (author, title, problem, solution_hint, votes, created_at)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `);
+
+        items.forEach((it) => {
+          const title = (it.title || "").trim();
+          const created_at = it.created_at || new Date().toISOString();
+
+          if (!title) {
+            skipped.push({ reason: "no-title", item: it });
+            return;
+          }
+
+          // Check existence synchronously via db.get (still inside serialize)
+          db.get("SELECT id FROM ideas WHERE title = ? AND created_at = ?", [title, created_at], (checkErr, rowExists) => {
+            if (checkErr) {
+              console.error("[autoRestore] lookup error", checkErr);
+              skipped.push({ reason: "lookup-error", item: it });
+              return;
+            }
+            if (rowExists) {
+              skipped.push({ reason: "exists", item: it });
+              return;
+            }
+
+            const votes = Number.isFinite(Number(it.votes)) ? Number(it.votes) : 0;
+            stmt.run([it.author || "", title, it.problem || "", it.solution_hint || "", votes, created_at], function (insErr) {
+              if (insErr) {
+                console.error("[autoRestore] insert error", insErr);
+                skipped.push({ reason: "insert-error", item: it });
+              } else {
+                inserted.push({ newId: this.lastID, title });
+              }
+            });
+          });
+        });
+
+        stmt.finalize((finalErr) => {
+          if (finalErr) console.error("[autoRestore] finalize error", finalErr);
+          // small delay to let callbacks finish
+          (async () => {
+            await sleep(800);
+            console.log(`[autoRestore] Done. inserted=${inserted.length}, skipped=${skipped.length}`);
+            if (inserted.length > 0) {
+              console.log("[autoRestore] First few inserted:", inserted.slice(0,5));
+            }
+          })();
+        });
+      });
+
+    });
+  } catch (e) {
+    console.error("[autoRestore] Unexpected error:", e);
+  }
+}
+
+// Kick off auto-restore (non-blocking)
+autoRestoreIfEmpty().catch(err => console.error("[autoRestore] top-level error", err));
+
 
 
 
