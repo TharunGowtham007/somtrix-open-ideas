@@ -30,7 +30,26 @@ const db = new sqlite3.Database(dbPath, (err) => {
 
 // Create ideas table
 db.serialize(() => {
-    db.run(`
+  db.run(`
+    CREATE TABLE IF NOT EXISTS ideas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      author TEXT,
+      title TEXT NOT NULL,
+      problem TEXT NOT NULL,
+      solution_hint TEXT NOT NULL,
+      votes INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Failed to create ideas table', err);
+    } else {
+      console.log('Ideas table is ready');
+    }
+  });
+
+  // 🔹 NEW: Track who voted, using IP + browser fingerprint
+  db.run(`
     CREATE TABLE IF NOT EXISTS idea_votes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       idea_id INTEGER NOT NULL,
@@ -40,11 +59,13 @@ db.serialize(() => {
     )
   `, (err) => {
     if (err) {
-      console.error("Failed to create idea_votes table", err);
+      console.error('Failed to create idea_votes table', err);
     } else {
-      console.log("idea_votes table is ready");
+      console.log('idea_votes table is ready');
     }
   });
+});
+
 
 
 // Helpers for sort/search
