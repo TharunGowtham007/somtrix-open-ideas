@@ -98,7 +98,10 @@ async function autoRestoreIfEmpty() {
       // 2) List files in backups folder via GitHub API
       let listRes;
       try {
-        listRes = await fetch(GITHUB_API_LIST_URL, { headers: { 'Accept': 'application/vnd.github.v3+json' } });
+       const ghHeaders = { 'Accept': 'application/vnd.github.v3+json' };
+if (process.env.GITHUB_TOKEN) ghHeaders['Authorization'] = `token ${process.env.GITHUB_TOKEN}`;
+listRes = await fetch(GITHUB_API_LIST_URL, { headers: ghHeaders });
+
       } catch (fetchErr) {
         console.error("[autoRestore] Failed to fetch GitHub contents:", fetchErr);
         return;
@@ -132,7 +135,8 @@ async function autoRestoreIfEmpty() {
       // 4) Download the backup file
       let fileRes;
       try {
-        fileRes = await fetch(latest.download_url);
+        fileRes = await fetch(latest.download_url, { headers: ghHeaders });
+
       } catch (err2) {
         console.error("[autoRestore] Failed to download backup file:", err2);
         return;
