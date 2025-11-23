@@ -70,9 +70,9 @@ db.serialize(() => {
 // ---------------------------
 
 // Configuration — change only if your repo is different
-const GITHUB_OWNER = "TharunGowtham007";   // <-- change if your GitHub username differs
-const GITHUB_REPO  = "somtrix-open-ideas"; // <-- change if repo name differs
-const GITHUB_BACKUPS_PATH = "backups"; // folder in repo
+const GITHUB_OWNER = "TharunGowtham007";
+const GITHUB_REPO  = "somtrix-open-ideas";
+const GITHUB_BACKUPS_PATH = "backups";
 const GITHUB_API_LIST_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_BACKUPS_PATH}`;
 
 // Helper: sleep for ms
@@ -95,13 +95,14 @@ async function autoRestoreIfEmpty() {
 
       console.log("[autoRestore] DB empty — attempting to fetch latest backup from GitHub.");
 
-      // 2) List files in backups folder via GitHub API
+      // Prepare headers for GitHub API requests (use token if available)
+      const ghHeaders = { 'Accept': 'application/vnd.github.v3+json' };
+      if (process.env.GITHUB_TOKEN) ghHeaders['Authorization'] = `token ${process.env.GITHUB_TOKEN}`;
+
+      // 2) List files in backups folder via GitHub API (authenticated if token present)
       let listRes;
       try {
-       const ghHeaders = { 'Accept': 'application/vnd.github.v3+json' };
-if (process.env.GITHUB_TOKEN) ghHeaders['Authorization'] = `token ${process.env.GITHUB_TOKEN}`;
-listRes = await fetch(GITHUB_API_LIST_URL, { headers: ghHeaders });
-
+        listRes = await fetch(GITHUB_API_LIST_URL, { headers: ghHeaders });
       } catch (fetchErr) {
         console.error("[autoRestore] Failed to fetch GitHub contents:", fetchErr);
         return;
@@ -132,11 +133,10 @@ listRes = await fetch(GITHUB_API_LIST_URL, { headers: ghHeaders });
 
       console.log("[autoRestore] Found latest backup:", latest.name);
 
-      // 4) Download the backup file
+      // 4) Download the backup file (authenticated if token present)
       let fileRes;
       try {
         fileRes = await fetch(latest.download_url, { headers: ghHeaders });
-
       } catch (err2) {
         console.error("[autoRestore] Failed to download backup file:", err2);
         return;
