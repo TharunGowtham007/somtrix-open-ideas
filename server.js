@@ -116,24 +116,89 @@ app.post('/api/ideas', (req, res) => {
     VALUES (?, ?, ?, ?)
   `);
 
-  stmt.run(author.trim(), title.trim(), problem.trim(), solution_hint.trim(), function (err) {
-    if (err) {
-      console.error('Error inserting idea', err);
-      return res.status(500).json({ error: 'Failed to save idea' });
-    }
-
-    const id = this.lastID;
-    db.get('SELECT * FROM ideas WHERE id = ?', [id], (err2, row) => {
-      if (err2) {
-        console.error('Error fetching new idea', err2);
-        return res.status(500).json({ error: 'Idea created but failed to reload' });
+  stmt.run(
+    author.trim(),
+    title.trim(),
+    problem.trim(),
+    solution_hint.trim(),
+    function (err) {
+      if (err) {
+        console.error('Error inserting idea', err);
+        return res.status(500).json({ error: 'Failed to save idea' });
       }
-      res.status(201).json(row);
-    });
-  });
 
+      const id = this.lastID;
+      db.get('SELECT * FROM ideas WHERE id = ?', [id], (err2, row) => {
+        if (err2) {
+          console.error('Error fetching new idea', err2);
+          return res.status(500).json({ error: 'Idea created but failed to reload' });
+        }
+        res.status(201).json(row);
+      });
+    }
+  );
+
+  // 🔹 finalize belongs to the create-idea statement
   stmt.finalize();
 });
+
+// Vote for an idea with simple anti-spam (1 vote per IP+browser per idea)
+app.post('/api/ideas/:id/vote', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) {
+    return res.status(400).json({ error: 'Invalid idea id' });
+  }
+
+  // Build a fingerprint from IP + User-Agent
+  const ua = req.headers['user-agent'] || '';
+  const xff = req.headers['x-forwarded-for'];
+  const ip = typeof xff === 'string'
+    ? xff.split(',')[0].trim()
+    : (req.socket && req.socket.remoteAddress) || '';
+
+  const fingerprint = `${ip}|${ua}`;
+
+  // Try to insert a unique vote record
+  db.run(
+    'INSERT INTO idea_votes (idea_id, fingerprint) VALUES (?, ?)',
+    [id, fingerprint],
+    function (err) {
+      if (err) {
+        // UNIQUE(idea_id, fingerprint) blocked duplicate → already voted
+        if (err.code === 'SQLITE_CONSTRAINT') {
+          console.log('Duplicate vote blocked for', fingerprint);
+          return res.json({ alreadyVoted: true });
+        }
+        console.error('Error inserting idea_votes row', err);
+        return res.status(500).json({ error: 'Failed to support idea' });
+      }
+
+      // First time voting from this fingerprint → increment main counter
+      db.run(
+        'UPDATE ideas SET votes = votes + 1 WHERE id = ?',
+        [id],
+        function (err2) {
+          if (err2) {
+            console.error('Error updating votes', err2);
+            return res.status(500).json({ error: 'Failed to update votes' });
+          }
+          if (this.changes === 0) {
+            return res.status(404).json({ error: 'Idea not found' });
+          }
+
+          db.get('SELECT * FROM ideas WHERE id = ?', [id], (err3, row) => {
+            if (err3) {
+              console.error('Error fetching updated idea', err3);
+              return res.status(500).json({ error: 'Idea updated but failed to reload' });
+            }
+            res.json(row);
+          });
+        }
+      );
+    }
+  );
+});
+
 
 // Strong anti-spam voting: one vote per browser token (unique)
 app.post("/api/ideas/:id/vote", (req, res) => {
