@@ -1,3 +1,4 @@
+// server.js - SomTriX open ideas board (complete, fixed)
 const express = require('express');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
@@ -28,7 +29,7 @@ const db = new sqlite3.Database(dbPath, (err) => {
   }
 });
 
-// Create ideas table
+// Create ideas table and votes table
 db.serialize(() => {
   db.run(`
     CREATE TABLE IF NOT EXISTS ideas (
@@ -48,7 +49,6 @@ db.serialize(() => {
     }
   });
 
-  // 🔹 NEW: Track who voted, using IP + browser fingerprint
   db.run(`
     CREATE TABLE IF NOT EXISTS idea_votes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -65,6 +65,7 @@ db.serialize(() => {
     }
   });
 });
+
 // ---------------------------
 // Auto-restore from GitHub backups (if DB empty)
 // ---------------------------
@@ -80,7 +81,6 @@ function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
 async function autoRestoreIfEmpty() {
   try {
-    // 1) Check if ideas table has rows
     db.get("SELECT COUNT(*) AS cnt FROM ideas", async (err, row) => {
       if (err) {
         console.error("[autoRestore] failed to check ideas count:", err);
@@ -163,11 +163,10 @@ async function autoRestoreIfEmpty() {
 
       console.log(`[autoRestore] Restoring ${items.length} ideas into DB (deduping by title + created_at).`);
 
-            // 5) Insert items into DB, dedupe by (title + created_at)
+      // 5) Insert items into DB, dedupe by (title + created_at)
       const inserted = [];
       const skipped = [];
 
-      // We'll process items and run direct db.run inserts inside the db.get callbacks.
       db.serialize(() => {
         let pending = items.length;
         if (pending === 0) {
@@ -182,7 +181,6 @@ async function autoRestoreIfEmpty() {
           if (!title) {
             skipped.push({ reason: "no-title", item: it });
             if (--pending === 0) {
-              // small delay to let callbacks finish
               setTimeout(() => {
                 console.log(`[autoRestore] Done. inserted=${inserted.length}, skipped=${skipped.length}`);
                 if (inserted.length > 0) console.log("[autoRestore] First few inserted:", inserted.slice(0,5));
@@ -191,7 +189,6 @@ async function autoRestoreIfEmpty() {
             return;
           }
 
-          // Check existence then insert directly with db.run
           db.get("SELECT id FROM ideas WHERE title = ? AND created_at = ?", [title, created_at], (checkErr, rowExists) => {
             if (checkErr) {
               console.error("[autoRestore] lookup error", checkErr);
@@ -221,7 +218,6 @@ async function autoRestoreIfEmpty() {
                   inserted.push({ newId: this.lastID, title });
                 }
                 if (--pending === 0) {
-                  // small delay to let any remaining callbacks finish
                   setTimeout(() => {
                     console.log(`[autoRestore] Done. inserted=${inserted.length}, skipped=${skipped.length}`);
                     if (inserted.length > 0) console.log("[autoRestore] First few inserted:", inserted.slice(0,5));
@@ -233,14 +229,18 @@ async function autoRestoreIfEmpty() {
         });
       });
 
+    });
+  } catch (e) {
+    console.error("[autoRestore] Unexpected error:", e);
+  }
+}
 
 // Kick off auto-restore (non-blocking)
 autoRestoreIfEmpty().catch(err => console.error("[autoRestore] top-level error", err));
 
-
-
-
+// ---------------------------
 // Helpers for sort/search
+// ---------------------------
 function buildIdeasQuery(params) {
   const { sort, search } = params;
   let sql = 'SELECT * FROM ideas';
@@ -310,44 +310,44 @@ app.post('/api/ideas', (req, res) => {
     }
   );
 
-  // 🔹 finalize belongs to the create-idea statement
   stmt.finalize();
 });
 
-// Vote for an idea with simple anti-spam (1 vote per IP+browser per idea)
+// Vote for an idea with simple anti-spam (1 vote per token/IP+UA per idea)
 app.post('/api/ideas/:id/vote', (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) {
     return res.status(400).json({ error: 'Invalid idea id' });
   }
 
-  // Build a fingerprint from IP + User-Agent
+  // Browser token from frontend (preferred)
+  let browserToken = req.headers['x-voter-token'];
+  if (Array.isArray(browserToken)) browserToken = browserToken[0];
+
+  // Fallback: create fingerprint from IP + UA
   const ua = req.headers['user-agent'] || '';
   const xff = req.headers['x-forwarded-for'];
   const ip = typeof xff === 'string'
     ? xff.split(',')[0].trim()
     : (req.socket && req.socket.remoteAddress) || '';
 
-  const fingerprint = `${ip}|${ua}`;
+  const fingerprint = (typeof browserToken === 'string' && browserToken.trim()) || `${ip}|${ua}`;
 
-  // Try to insert a unique vote record
   db.run(
-    'INSERT INTO idea_votes (idea_id, fingerprint) VALUES (?, ?)',
+    "INSERT INTO idea_votes (idea_id, fingerprint) VALUES (?, ?)",
     [id, fingerprint],
     function (err) {
       if (err) {
-        // UNIQUE(idea_id, fingerprint) blocked duplicate → already voted
         if (err.code === 'SQLITE_CONSTRAINT') {
-          console.log('Duplicate vote blocked for', fingerprint);
-          return res.json({ alreadyVoted: true });
+          console.log('Blocked duplicate vote:', fingerprint);
+          return res.status(200).json({ alreadyVoted: true });
         }
-        console.error('Error inserting idea_votes row', err);
+        console.error('Error inserting vote record', err);
         return res.status(500).json({ error: 'Failed to support idea' });
       }
 
-      // First time voting from this fingerprint → increment main counter
       db.run(
-        'UPDATE ideas SET votes = votes + 1 WHERE id = ?',
+        "UPDATE ideas SET votes = votes + 1 WHERE id = ?",
         [id],
         function (err2) {
           if (err2) {
@@ -357,79 +357,10 @@ app.post('/api/ideas/:id/vote', (req, res) => {
           if (this.changes === 0) {
             return res.status(404).json({ error: 'Idea not found' });
           }
-
-          db.get('SELECT * FROM ideas WHERE id = ?', [id], (err3, row) => {
-            if (err3) {
-              console.error('Error fetching updated idea', err3);
-              return res.status(500).json({ error: 'Idea updated but failed to reload' });
-            }
-            res.json(row);
-          });
-        }
-      );
-    }
-  );
-});
-
-
-// Strong anti-spam voting: one vote per browser token (unique)
-app.post("/api/ideas/:id/vote", (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  if (!Number.isFinite(id)) {
-    return res.status(400).json({ error: "Invalid idea id" });
-  }
-
-  // Browser token from frontend (preferred)
-  let browserToken = req.headers["x-voter-token"];
-  if (Array.isArray(browserToken)) browserToken = browserToken[0];
-
-  // Fallback: create fingerprint if no token
-  const ua = req.headers["user-agent"] || "";
-  const xff = req.headers["x-forwarded-for"];
-  const ip = typeof xff === "string"
-    ? xff.split(",")[0].trim()
-    : (req.socket && req.socket.remoteAddress) || "";
-
-  const fingerprint =
-    (typeof browserToken === "string" && browserToken.trim()) ||
-    `${ip}|${ua}`;
-
-  // Insert vote record (unique pair: idea_id + fingerprint)
-  db.run(
-    "INSERT INTO idea_votes (idea_id, fingerprint) VALUES (?, ?)",
-    [id, fingerprint],
-    function (err) {
-      if (err) {
-        // UNIQUE constraint = already voted
-        if (err.code === "SQLITE_CONSTRAINT") {
-          console.log("Blocked duplicate vote:", fingerprint);
-          return res.status(200).json({ alreadyVoted: true });
-        }
-
-        console.error("Error inserting vote record", err);
-        return res.status(500).json({ error: "Failed to support idea" });
-      }
-
-      // First time voting → increment idea's vote count
-      db.run(
-        "UPDATE ideas SET votes = votes + 1 WHERE id = ?",
-        [id],
-        function (err2) {
-          if (err2) {
-            console.error("Error updating votes", err2);
-            return res.status(500).json({ error: "Failed to update votes" });
-          }
-          if (this.changes === 0) {
-            return res.status(404).json({ error: "Idea not found" });
-          }
-
-          // Return updated idea
           db.get("SELECT * FROM ideas WHERE id = ?", [id], (err3, row) => {
             if (err3) {
-              console.error("Error loading updated idea", err3);
-              return res
-                .status(500)
-                .json({ error: "Idea updated but could not reload" });
+              console.error('Error loading updated idea', err3);
+              return res.status(500).json({ error: 'Idea updated but could not reload' });
             }
             res.json(row);
           });
@@ -438,7 +369,6 @@ app.post("/api/ideas/:id/vote", (req, res) => {
     }
   );
 });
-
 
 // Health check
 app.get('/health', (req, res) => {
@@ -490,7 +420,21 @@ function adminDeleteIdeaHandler(req, res) {
 app.delete("/api/admin/ideas/:id", requireAdmin, adminDeleteIdeaHandler);
 app.get("/api/admin/ideas/:id", requireAdmin, adminDeleteIdeaHandler);
 
+// Simple admin export (downloadable) - helpful for backups
+app.get('/api/admin/export', requireAdmin, (req, res) => {
+  db.all('SELECT * FROM ideas ORDER BY id ASC', [], (err, rows) => {
+    if (err) {
+      console.error('Export failed', err);
+      return res.status(500).json({ error: 'Failed to export ideas' });
+    }
+    const filename = `somtrix-ideas-export-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'application/json');
+    res.send(JSON.stringify(rows, null, 2));
+  });
+});
 
+// Start server
 app.listen(PORT, () => {
   console.log(`SomTriX ideas board listening on port ${PORT}`);
 });
