@@ -1,0 +1,39 @@
+name: Backup SomTriX ideas (every 15m)
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'    # every 15 minutes
+  workflow_dispatch:          # allow manual run
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch ideas JSON from site (admin export preferred)
+        env:
+          ADMIN_KEY: ${{ secrets.RENDER_ADMIN_KEY }}
+          SITE_URL: https://somtrix-open-ideas.onrender.com
+        run: |
+          if [ -n "$ADMIN_KEY" ]; then
+            curl --fail -sS "$SITE_URL/api/admin/export?admin_key=$ADMIN_KEY" -o ideas-backup.json || { echo "fetch-failed"; exit 1; }
+          else
+            curl --fail -sS "$SITE_URL/api/ideas" -o ideas-backup.json || { echo "fetch-failed"; exit 1; }
+          fi
+          jq --version >/dev/null 2>&1 || sudo apt-get update -y && sudo apt-get install -y jq
+
+      - name: Save timestamped backup and commit
+        run: |
+          ts=$(date -u +"%Y-%m-%dT%H%MZ")
+          mkdir -p backups
+          cp ideas-backup.json backups/ideas-backup-$ts.json
+          git config user.email "github-actions@users.noreply.github.com"
+          git config user.name "GitHub Actions"
+          git add backups/ideas-backup-$ts.json
+          git commit -m "Backup ideas at $ts" || echo "No changes to commit"
+
+      - name: Push backup
+        uses: ad-m/github-push-action@v0.6.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
