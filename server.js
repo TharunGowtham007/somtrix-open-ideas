@@ -163,15 +163,17 @@ async function autoRestoreIfEmpty() {
 
       console.log(`[autoRestore] Restoring ${items.length} ideas into DB (deduping by title + created_at).`);
 
-      // 5) Insert items into DB, dedupe by (title + created_at)
+            // 5) Insert items into DB, dedupe by (title + created_at)
       const inserted = [];
       const skipped = [];
 
+      // We'll process items and run direct db.run inserts inside the db.get callbacks.
       db.serialize(() => {
-        const stmt = db.prepare(`
-          INSERT INTO ideas (author, title, problem, solution_hint, votes, created_at)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `);
+        let pending = items.length;
+        if (pending === 0) {
+          console.log("[autoRestore] No items to restore.");
+          return;
+        }
 
         items.forEach((it) => {
           const title = (it.title || "").trim();
@@ -179,51 +181,58 @@ async function autoRestoreIfEmpty() {
 
           if (!title) {
             skipped.push({ reason: "no-title", item: it });
+            if (--pending === 0) {
+              // small delay to let callbacks finish
+              setTimeout(() => {
+                console.log(`[autoRestore] Done. inserted=${inserted.length}, skipped=${skipped.length}`);
+                if (inserted.length > 0) console.log("[autoRestore] First few inserted:", inserted.slice(0,5));
+              }, 200);
+            }
             return;
           }
 
-          // Check existence synchronously via db.get (still inside serialize)
+          // Check existence then insert directly with db.run
           db.get("SELECT id FROM ideas WHERE title = ? AND created_at = ?", [title, created_at], (checkErr, rowExists) => {
             if (checkErr) {
               console.error("[autoRestore] lookup error", checkErr);
               skipped.push({ reason: "lookup-error", item: it });
+              if (--pending === 0) {
+                setTimeout(() => console.log(`[autoRestore] Done. inserted=${inserted.length}, skipped=${skipped.length}`), 200);
+              }
               return;
             }
             if (rowExists) {
               skipped.push({ reason: "exists", item: it });
+              if (--pending === 0) {
+                setTimeout(() => console.log(`[autoRestore] Done. inserted=${inserted.length}, skipped=${skipped.length}`), 200);
+              }
               return;
             }
 
             const votes = Number.isFinite(Number(it.votes)) ? Number(it.votes) : 0;
-            stmt.run([it.author || "", title, it.problem || "", it.solution_hint || "", votes, created_at], function (insErr) {
-              if (insErr) {
-                console.error("[autoRestore] insert error", insErr);
-                skipped.push({ reason: "insert-error", item: it });
-              } else {
-                inserted.push({ newId: this.lastID, title });
+            db.run(
+              "INSERT INTO ideas (author, title, problem, solution_hint, votes, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+              [it.author || "", title, it.problem || "", it.solution_hint || "", votes, created_at],
+              function (insErr) {
+                if (insErr) {
+                  console.error("[autoRestore] insert error", insErr);
+                  skipped.push({ reason: "insert-error", item: it });
+                } else {
+                  inserted.push({ newId: this.lastID, title });
+                }
+                if (--pending === 0) {
+                  // small delay to let any remaining callbacks finish
+                  setTimeout(() => {
+                    console.log(`[autoRestore] Done. inserted=${inserted.length}, skipped=${skipped.length}`);
+                    if (inserted.length > 0) console.log("[autoRestore] First few inserted:", inserted.slice(0,5));
+                  }, 200);
+                }
               }
-            });
+            );
           });
-        });
-
-        stmt.finalize((finalErr) => {
-          if (finalErr) console.error("[autoRestore] finalize error", finalErr);
-          // small delay to let callbacks finish
-          (async () => {
-            await sleep(800);
-            console.log(`[autoRestore] Done. inserted=${inserted.length}, skipped=${skipped.length}`);
-            if (inserted.length > 0) {
-              console.log("[autoRestore] First few inserted:", inserted.slice(0,5));
-            }
-          })();
         });
       });
 
-    });
-  } catch (e) {
-    console.error("[autoRestore] Unexpected error:", e);
-  }
-}
 
 // Kick off auto-restore (non-blocking)
 autoRestoreIfEmpty().catch(err => console.error("[autoRestore] top-level error", err));
