@@ -1,4 +1,9 @@
-// server.js - SomTriX open ideas board (complete, fixed)
+// server.js - SomTriX open ideas board (updated Feb/Nov 2025)
+// - Adds support for email & category
+// - Safe migration for existing DBs (no Render shell required)
+// - Admin JSON endpoint for admin UI (includes email)
+// - Auto-restore from GitHub backups (uses backups/ folder in repo)
+
 const express = require('express');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
@@ -29,12 +34,14 @@ const db = new sqlite3.Database(dbPath, (err) => {
   }
 });
 
-// Create ideas table and votes table
+// Create ideas table and votes table (include email & category in schema)
 db.serialize(() => {
   db.run(`
     CREATE TABLE IF NOT EXISTS ideas (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       author TEXT,
+      email TEXT,
+      category TEXT,
       title TEXT NOT NULL,
       problem TEXT NOT NULL,
       solution_hint TEXT NOT NULL,
@@ -66,19 +73,45 @@ db.serialize(() => {
   });
 });
 
+// ======================
+// Migration helper: add column if missing (safe, idempotent)
+// ======================
+function ensureColumn(table, column, definition, cb) {
+  db.all(`PRAGMA table_info(${table})`, (err, cols) => {
+    if (err) {
+      console.error(`[migrate] failed to read table info for ${table}`, err);
+      return cb && cb(err);
+    }
+    const found = Array.isArray(cols) && cols.some(c => String(c.name).toLowerCase() === String(column).toLowerCase());
+    if (found) {
+      return cb && cb();
+    }
+    // Add column
+    db.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`, (alterErr) => {
+      if (alterErr) {
+        console.error(`[migrate] failed to add column ${column} to ${table}`, alterErr);
+        return cb && cb(alterErr);
+      }
+      console.log(`[migrate] added column ${column} to ${table}`);
+      cb && cb();
+    });
+  });
+}
+
+// Ensure email & category exist for older DBs (safe)
+ensureColumn('ideas', 'email', 'TEXT', () => {});
+ensureColumn('ideas', 'category', 'TEXT', () => {});
+
 // ---------------------------
 // Auto-restore from GitHub backups (if DB empty)
 // ---------------------------
 
-// Configuration — change only if your repo is different
 const GITHUB_OWNER = "TharunGowtham007";
 const GITHUB_REPO  = "somtrix-open-ideas";
 const GITHUB_BACKUPS_PATH = "backups";
 const GITHUB_API_LIST_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_BACKUPS_PATH}`;
 
-// Helper: sleep for ms
-function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
-
+// Kick off async auto-restore: fetch latest backups file and insert rows if DB empty
 async function autoRestoreIfEmpty() {
   try {
     db.get("SELECT COUNT(*) AS cnt FROM ideas", async (err, row) => {
@@ -95,11 +128,9 @@ async function autoRestoreIfEmpty() {
 
       console.log("[autoRestore] DB empty — attempting to fetch latest backup from GitHub.");
 
-      // Prepare headers for GitHub API requests (use token if available)
       const ghHeaders = { 'Accept': 'application/vnd.github.v3+json' };
       if (process.env.GITHUB_TOKEN) ghHeaders['Authorization'] = `token ${process.env.GITHUB_TOKEN}`;
 
-      // 2) List files in backups folder via GitHub API (authenticated if token present)
       let listRes;
       try {
         listRes = await fetch(GITHUB_API_LIST_URL, { headers: ghHeaders });
@@ -119,10 +150,10 @@ async function autoRestoreIfEmpty() {
         return;
       }
 
-      // 3) Pick the latest backup file by filename (timestamped names sort lexicographically)
+      // newest first
       files.sort((a, b) => {
         if (!a.name || !b.name) return 0;
-        return a.name < b.name ? 1 : -1; // descending: newest first
+        return a.name < b.name ? 1 : -1;
       });
 
       const latest = files[0];
@@ -133,7 +164,6 @@ async function autoRestoreIfEmpty() {
 
       console.log("[autoRestore] Found latest backup:", latest.name);
 
-      // 4) Download the backup file (authenticated if token present)
       let fileRes;
       try {
         fileRes = await fetch(latest.download_url, { headers: ghHeaders });
@@ -163,7 +193,6 @@ async function autoRestoreIfEmpty() {
 
       console.log(`[autoRestore] Restoring ${items.length} ideas into DB (deduping by title + created_at).`);
 
-      // 5) Insert items into DB, dedupe by (title + created_at)
       const inserted = [];
       const skipped = [];
 
@@ -206,10 +235,17 @@ async function autoRestoreIfEmpty() {
               return;
             }
 
+            // read email & category if present in backup JSON
+            const author = it.author || "";
+            const email = it.email || "";
+            const category = it.category || "";
             const votes = Number.isFinite(Number(it.votes)) ? Number(it.votes) : 0;
+            const problem = it.problem || "";
+            const solution_hint = it.solution_hint || "";
+
             db.run(
-              "INSERT INTO ideas (author, title, problem, solution_hint, votes, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-              [it.author || "", title, it.problem || "", it.solution_hint || "", votes, created_at],
+              "INSERT INTO ideas (author, email, category, title, problem, solution_hint, votes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+              [author, email, category, title, problem, solution_hint, votes, created_at],
               function (insErr) {
                 if (insErr) {
                   console.error("[autoRestore] insert error", insErr);
@@ -235,7 +271,6 @@ async function autoRestoreIfEmpty() {
   }
 }
 
-// Kick off auto-restore (non-blocking)
 autoRestoreIfEmpty().catch(err => console.error("[autoRestore] top-level error", err));
 
 // ---------------------------
@@ -247,9 +282,9 @@ function buildIdeasQuery(params) {
   const sqlParams = [];
 
   if (search) {
-    sql += ' WHERE LOWER(title) LIKE ? OR LOWER(author) LIKE ?';
+    sql += ' WHERE LOWER(title) LIKE ? OR LOWER(author) LIKE ? OR LOWER(category) LIKE ?';
     const like = `%${search.toLowerCase()}%`;
-    sqlParams.push(like, like);
+    sqlParams.push(like, like, like);
   }
 
   if (sort === 'new') {
@@ -263,7 +298,7 @@ function buildIdeasQuery(params) {
 
 // API routes
 
-// Get ideas
+// Get ideas (public) - does not include email for privacy
 app.get('/api/ideas', (req, res) => {
   const { sql, sqlParams } = buildIdeasQuery(req.query);
   db.all(sql, sqlParams, (err, rows) => {
@@ -271,44 +306,51 @@ app.get('/api/ideas', (req, res) => {
       console.error('Error fetching ideas', err);
       return res.status(500).json({ error: 'Failed to fetch ideas' });
     }
-    res.json(rows);
+    // remove email field from public response for privacy
+    const publicRows = rows.map(r => {
+      const { email, ...rest } = r;
+      return rest;
+    });
+    res.json(publicRows);
   });
 });
 
-// Create idea
+// Create idea (public)
 app.post('/api/ideas', (req, res) => {
-  const { author = '', title, problem, solution_hint } = req.body;
+  const { author = '', email = '', category = '', title, problem, solution_hint } = req.body;
 
   if (!title || !problem || !solution_hint) {
-    return res.status(400).json({ error: 'Missing required fields' });
+    return res.status(400).json({ error: 'Missing required fields (title/problem/solution_hint)' });
   }
 
+  const a = author.trim();
+  const e = (email || '').trim();
+  const cat = (category || '').trim();
+  const t = title.trim();
+  const p = problem.trim();
+  const s = solution_hint.trim();
+
   const stmt = db.prepare(`
-    INSERT INTO ideas (author, title, problem, solution_hint)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO ideas (author, email, category, title, problem, solution_hint)
+    VALUES (?, ?, ?, ?, ?, ?)
   `);
 
-  stmt.run(
-    author.trim(),
-    title.trim(),
-    problem.trim(),
-    solution_hint.trim(),
-    function (err) {
-      if (err) {
-        console.error('Error inserting idea', err);
-        return res.status(500).json({ error: 'Failed to save idea' });
-      }
-
-      const id = this.lastID;
-      db.get('SELECT * FROM ideas WHERE id = ?', [id], (err2, row) => {
-        if (err2) {
-          console.error('Error fetching new idea', err2);
-          return res.status(500).json({ error: 'Idea created but failed to reload' });
-        }
-        res.status(201).json(row);
-      });
+  stmt.run(a, e, cat, t, p, s, function (err) {
+    if (err) {
+      console.error('Error inserting idea', err);
+      return res.status(500).json({ error: 'Failed to save idea' });
     }
-  );
+
+    const id = this.lastID;
+    db.get('SELECT * FROM ideas WHERE id = ?', [id], (err2, row) => {
+      if (err2) {
+        console.error('Error fetching new idea', err2);
+        return res.status(500).json({ error: 'Idea created but failed to reload' });
+      }
+      // do not expose email in response unless admin; we return full row to requester (but public UI won't show email)
+      res.status(201).json(row);
+    });
+  });
 
   stmt.finalize();
 });
@@ -396,6 +438,25 @@ function requireAdmin(req, res, next) {
   }
   next();
 }
+
+// Admin JSON listing (includes email & category) — protected by requireAdmin
+app.get('/api/admin/ideas', requireAdmin, (req, res) => {
+  const { category } = req.query;
+  let sql = 'SELECT * FROM ideas';
+  const params = [];
+  if (category) {
+    sql += ' WHERE category = ?';
+    params.push(category);
+  }
+  sql += ' ORDER BY datetime(created_at) DESC';
+  db.all(sql, params, (err, rows) => {
+    if (err) {
+      console.error('Admin ideas fetch failed', err);
+      return res.status(500).json({ error: 'Failed to fetch ideas' });
+    }
+    res.json(rows);
+  });
+});
 
 // Shared handler for deleting an idea by ID (for GET + DELETE)
 function adminDeleteIdeaHandler(req, res) {
