@@ -483,7 +483,7 @@
     This board is for open, public ideas only. Do not submit confidential, patented or legally sensitive material.
   </footer>
 
-    <script>
+      <script>
     const API_BASE = "";
     const ideaListEl = document.getElementById("idea-list");
     const ideaCountEl = document.getElementById("idea-count");
@@ -491,6 +491,44 @@
     const sortEl = document.getElementById("sort");
 
     let ideas = [];
+
+    // Unique browser token – same for this browser forever
+    function getBrowserToken() {
+      try {
+        let t = localStorage.getItem("somtrix_browser_token");
+        if (!t) {
+          if (window.crypto && crypto.randomUUID) {
+            t = crypto.randomUUID();
+          } else {
+            t = Date.now().toString(36) + "-" + Math.random().toString(16).slice(2);
+          }
+          localStorage.setItem("somtrix_browser_token", t);
+        }
+        return t;
+      } catch (e) {
+        return "";
+      }
+    }
+
+    // Track which ideas this browser has supported (extra front-end guard)
+    function getVotedIds() {
+      try {
+        const raw = localStorage.getItem("somtrix_voted_ids");
+        if (!raw) return [];
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveVotedIds(ids) {
+      try {
+        localStorage.setItem("somtrix_voted_ids", JSON.stringify(ids));
+      } catch (e) {
+        // ignore
+      }
+    }
 
     function getTimestamp(idea) {
       if (typeof idea.created_at === "number") return idea.created_at;
@@ -522,6 +560,7 @@
     function renderIdeas() {
       const q = (searchEl.value || "").trim().toLowerCase();
       const sort = sortEl.value || "top";
+      const votedIds = getVotedIds();
 
       let filtered = ideas.filter((idea) => {
         if (!q) return true;
@@ -575,7 +614,6 @@
         const main = document.createElement("div");
         main.className = "idea-main";
 
-        // 🔹 NEW: show ID at top of card
         const idEl = document.createElement("div");
         idEl.className = "idea-id";
         idEl.textContent = "ID #" + idea.id;
@@ -633,6 +671,14 @@
         supportBtn.className = "btn-support";
         supportBtn.type = "button";
         supportBtn.innerHTML = '<span class="icon">❤</span><span>Support</span>';
+
+        // If this browser already supported this idea, disable button
+        if (votedIds.includes(idea.id)) {
+          supportBtn.disabled = true;
+          supportBtn.style.opacity = 0.6;
+          supportBtn.style.cursor = "default";
+        }
+
         supportBtn.addEventListener("click", () => handleVote(idea.id));
 
         const votesEl = document.createElement("div");
@@ -681,14 +727,41 @@
     }
 
     async function handleVote(id) {
+      const votedIds = getVotedIds();
+      if (votedIds.includes(id)) {
+        alert("You have already supported this idea from this browser.");
+        return;
+      }
+
       try {
         const res = await fetch(`${API_BASE}/api/ideas/${id}/vote`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "x-voter-token": getBrowserToken(),
+          },
         });
-        if (!res.ok) throw new Error("Failed to support idea");
-        const updated = await res.json();
-        ideas = ideas.map((i) => (i.id === updated.id ? updated : i));
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to support idea");
+        }
+
+        if (data.alreadyVoted) {
+          // Backend says this token already voted, sync front-end
+          alert("You have already supported this idea.");
+          votedIds.push(id);
+          saveVotedIds(votedIds);
+          renderIdeas();
+          return;
+        }
+
+        // data is the updated idea row
+        ideas = ideas.map((i) => (i.id === data.id ? data : i));
+
+        votedIds.push(id);
+        saveVotedIds(votedIds);
+
         renderIdeas();
       } catch (err) {
         console.error(err);
