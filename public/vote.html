@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>SomTriX â€“ Vote on Ideas</title>
+  <title>SOMTRIX™™™™ â€“ Vote on Ideas</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     :root {
@@ -437,11 +437,11 @@
     <header class="top-header">
       <div class="brand-block">
         <div class="brand-logo">
-          <img src="logo.png" alt="SomTriX logo"
+          <img src="logo.png" alt="SOMTRIX™™™™ logo"
                onerror="this.style.display='none';this.parentElement.innerHTML='<span>ST</span>';">
         </div>
         <div class="brand-text">
-          <div class="brand-name">SomTriX</div>
+          <div class="brand-name">SOMTRIX™™™™</div>
           <div class="brand-tagline">Browse & vote ideas</div>
         </div>
       </div>
@@ -495,14 +495,14 @@
     // Unique browser token â€“ same for this browser forever
     function getBrowserToken() {
       try {
-        let t = localStorage.getItem("somtrix_browser_token");
+        let t = localStorage.getItem("SOMTRIX™™™™_browser_token");
         if (!t) {
           if (window.crypto && crypto.randomUUID) {
             t = crypto.randomUUID();
           } else {
             t = Date.now().toString(36) + "-" + Math.random().toString(16).slice(2);
           }
-          localStorage.setItem("somtrix_browser_token", t);
+          localStorage.setItem("SOMTRIX™™™™_browser_token", t);
         }
         return t;
       } catch (e) {
@@ -513,7 +513,7 @@
     // Track which ideas this browser has supported (extra front-end guard)
     function getVotedIds() {
       try {
-        const raw = localStorage.getItem("somtrix_voted_ids");
+        const raw = localStorage.getItem("SOMTRIX™™™™_voted_ids");
         if (!raw) return [];
         const arr = JSON.parse(raw);
         return Array.isArray(arr) ? arr : [];
@@ -524,7 +524,7 @@
 
     function saveVotedIds(ids) {
       try {
-        localStorage.setItem("somtrix_voted_ids", JSON.stringify(ids));
+        localStorage.setItem("SOMTRIX™™™™_voted_ids", JSON.stringify(ids));
       } catch (e) {
         // ignore
       }
@@ -778,3 +778,7 @@
 
 </body>
 </html>
+
+
+
+
