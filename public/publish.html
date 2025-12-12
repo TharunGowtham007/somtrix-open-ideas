@@ -1,160 +1,141 @@
-﻿<!DOCTYPE html>
+﻿<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8"/>
   <title>SOMTRIX&trade; – Publish an Idea</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <style>
-    /* (style same as your other pages - trimmed for brevity) */
-    :root{--dark-titanium:#2C3E50;--soft-blue:#7F8CBD;--surface-main:#fff;--surface-soft:#f7f9ff;--border-soft:#dde4f1;--text-main:#11141c;--text-soft:#6c7689;--radius-md:14px;--radius-pill:999px;--font-sans:system-ui,-apple-system,BlinkMacSystemFont,"Inter",sans-serif}
-    *{box-sizing:border-box;margin:0;padding:0}body{font-family:var(--font-sans);background:linear-gradient(145deg,#eef2fb 0,#dfe7ff 40%,#f4f7fb 100%);color:var(--text-main);min-height:100vh;display:flex;flex-direction:column}
-    .page-shell{max-width:960px;margin:0 auto;padding:20px 16px 40px}.main-card{border-radius:26px;background:var(--surface-main);border:1px solid var(--border-soft);box-shadow:0 18px 40px rgba(22,34,54,.12);padding:20px}
-    label{font-size:11px;color:var(--text-soft);display:block;margin-bottom:6px}
-    input[type=text],input[type=email],select,textarea{width:100%;padding:8px 10px;border-radius:var(--radius-md);border:1px solid var(--border-soft);background:var(--surface-soft);font-size:13px;outline:none}
-    textarea{min-height:90px;resize:vertical}
-    .submit-footer{display:flex;justify-content:space-between;align-items:center;margin-top:12px}
-    .btn-primary{padding:8px 18px;border-radius:999px;background:var(--soft-blue);color:#fff;border:none;cursor:pointer}
-    .status-visible{display:block;padding:8px;border-radius:10px;margin-top:8px}
-    .status-error{background:#ffecec;border:1px solid #ff9b9b;color:#900;display:none}
-    .status-success{background:#f0fff0;border:1px solid #8fe28f;color:#0a5310;display:none}
+    :root{--accent:#7F8CBD;--muted:#6c7689;--card:#fff;--radius:16px;--maxw:900px}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;background:linear-gradient(145deg,#eef2fb,#dfe7ff);color:#111}
+    .wrap{max-width:var(--maxw);margin:20px auto;padding:16px}
+    header{display:flex;align-items:center;gap:12px}
+    .logo{width:60px;height:60px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center}
+    nav{margin-left:auto;display:flex;gap:12px}
+    .card{background:var(--card);padding:18px;border-radius:18px;border:1px solid rgba(200,210,230,0.7);box-shadow:0 12px 30px rgba(0,0,0,0.05)}
+    form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    label{font-size:12px;color:var(--muted)}
+    input[type="text"], textarea, select{width:100%;padding:10px;border-radius:10px;border:1px solid #d8dfef;resize:vertical}
+    textarea{min-height:120px;grid-column:1/-1}
+    .full-row{grid-column:1/-1}
+    .btn{display:inline-block;padding:10px 14px;border-radius:999px;background:var(--accent);color:#fff;text-decoration:none;border:none;font-weight:700}
+    .hint{font-size:12px;color:var(--muted);margin-top:6px}
+    @media(max-width:760px){form{grid-template-columns:1fr} .logo{width:50px;height:50px}}
   </style>
 </head>
 <body>
-  <div class="page-shell">
-    <main class="main-card">
-      <h1>Submit a public idea</h1>
-      <p style="color:var(--text-soft);margin:6px 0 12px">Share a problem and a short solution hint. Don’t post confidential details.</p>
+  <div class="wrap">
+    <header>
+      <div class="logo"><img src="logo.png" alt="SOMTRIX" style="width:44px"></div>
+      <div>
+        <div style="font-weight:800">SOMTRIX&trade;</div>
+        <div style="color:var(--muted)">Publish an idea</div>
+      </div>
+      <nav style="margin-left:auto">
+        <a href="index.html" style="color:var(--muted);text-decoration:underline">Home</a>
+        <a href="vote.html" style="color:var(--muted);text-decoration:underline">Vote</a>
+        <a href="products.html" style="color:var(--muted);text-decoration:underline">Products</a>
+      </nav>
+    </header>
+
+    <main class="card" style="margin-top:14px">
+      <h2 style="margin:0 0 6px">Submit a public idea</h2>
+      <p class="hint">Share a public idea — avoid posting secrets or proprietary content.</p>
 
       <form id="idea-form">
         <div>
           <label for="author">Your name (optional)</label>
-          <input id="author" type="text" maxlength="60" placeholder="e.g. Tharun G." />
+          <input id="author" name="author" type="text" maxlength="60" placeholder="e.g. Tharun G.">
         </div>
 
-        <div style="margin-top:8px">
-          <label for="email">Email (optional) — we will not publish this publicly, only visible to admin</label>
-          <input id="email" type="email" placeholder="you@example.com" />
+        <div>
+          <label for="email">Email (optional) — so we can contact you</label>
+          <input id="email" name="email" type="text" maxlength="120" placeholder="you@example.com">
         </div>
 
-        <div style="margin-top:8px">
-          <label for="category">Category</label>
-          <select id="category">
-            <option value="">Select category</option>
-            <option>Apparel / Clothes</option>
-            <option>Kitchen</option>
+        <div class="full-row">
+          <label for="category">Category (choose or type)</label>
+          <input list="categories" id="category" name="category" placeholder="e.g. Home, Health, Kitchen, Clothing, Mobility, IoT, Education">
+          <datalist id="categories">
             <option>Home</option>
-            <option>Electronics</option>
-            <option>Health &amp; Wellness</option>
-            <option>Transport</option>
+            <option>Health</option>
+            <option>Kitchen</option>
+            <option>Clothing</option>
+            <option>Mobility</option>
+            <option>IoT</option>
             <option>Education</option>
-            <option>Energy</option>
-            <option>Food &amp; Beverage</option>
-            <option>Sports</option>
-            <option>Toys &amp; Games</option>
             <option>Office</option>
-            <option>Gardening</option>
-            <option>Construction</option>
-            <option>Beauty &amp; Personal Care</option>
-            <option>Pet Care</option>
-            <option>Finance</option>
-            <option>Software</option>
-            <option>Services</option>
+            <option>Safety</option>
+            <option>Sports</option>
+            <option>Agriculture</option>
+            <option>Energy</option>
             <option>Other</option>
-          </select>
-
-          <div id="customCategoryWrap" style="display:none;margin-top:8px">
-            <input id="customCategory" type="text" placeholder="Enter custom category" />
-          </div>
+          </datalist>
         </div>
 
-        <div style="margin-top:8px">
+        <div class="full-row">
           <label for="title">Idea title *</label>
-          <input id="title" type="text" maxlength="160" required placeholder="Short clear title" />
+          <input id="title" name="title" type="text" maxlength="160" required placeholder="Short, clear title">
         </div>
 
-        <div style="margin-top:8px">
+        <div class="full-row">
           <label for="problem">Problem *</label>
-          <textarea id="problem" maxlength="1000" required></textarea>
+          <textarea id="problem" name="problem" maxlength="1000" required placeholder="Describe the exact problem and who faces it"></textarea>
         </div>
 
-        <div style="margin-top:8px">
+        <div class="full-row">
           <label for="solution_hint">Solution hint (high-level) *</label>
-          <textarea id="solution_hint" maxlength="600" required></textarea>
+          <textarea id="solution_hint" name="solution_hint" maxlength="600" required placeholder="High-level direction — not the full recipe"></textarea>
         </div>
 
-        <div id="form-error" class="status-error"></div>
-        <div id="form-success" class="status-success">Your idea is now live on the SOMTRIX&trade; public board. Thank you.</div>
-
-        <div class="submit-footer">
-          <div style="font-size:12px;color:var(--text-soft)">By posting you confirm the idea is public.</div>
-          <button id="submit-btn" class="btn-primary" type="submit">Post idea</button>
+        <div class="full-row" style="display:flex;gap:12px;align-items:center;justify-content:flex-end">
+          <div style="flex:1;color:var(--muted);font-size:13px">By posting, you confirm this text is okay to be public.</div>
+          <button class="btn" type="submit">Post idea</button>
         </div>
       </form>
+
+      <div id="status" style="margin-top:12px;color:green;display:none">Your idea has been published.</div>
     </main>
   </div>
 
   <script>
-    const API_BASE = "";
+    const API_BASE = '';
+    const form = document.getElementById('idea-form');
+    const status = document.getElementById('status');
 
-    // category custom toggle
-    document.getElementById('category').addEventListener('change', (e) => {
-      const v = e.target.value;
-      const wrap = document.getElementById('customCategoryWrap');
-      if (v === 'Other') wrap.style.display = 'block'; else { wrap.style.display = 'none'; document.getElementById('customCategory').value = ''; }
-    });
-
-    const formEl = document.getElementById('idea-form');
-    const errorEl = document.getElementById('form-error');
-    const successEl = document.getElementById('form-success');
-    const submitBtn = document.getElementById('submit-btn');
-
-    function showError(msg){ errorEl.textContent = msg; errorEl.style.display = 'block'; successEl.style.display = 'none'; }
-    function showSuccess(msg){ successEl.textContent = msg; successEl.style.display = 'block'; errorEl.style.display = 'none'; }
-
-    formEl.addEventListener('submit', async (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      errorEl.style.display = 'none'; successEl.style.display = 'none';
-
-      const author = (document.getElementById('author').value || '').trim();
-      const email = (document.getElementById('email').value || '').trim();
-      let category = (document.getElementById('category').value || '').trim();
-      const customCat = (document.getElementById('customCategory').value || '').trim();
-      if (category === 'Other' && customCat) category = customCat;
-
-      const title = (document.getElementById('title').value || '').trim();
-      const problem = (document.getElementById('problem').value || '').trim();
-      const solution_hint = (document.getElementById('solution_hint').value || '').trim();
-
-      if (!title || !problem || !solution_hint) { showError('Please fill required fields.'); return; }
-      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showError('Enter a valid email or leave it blank.'); return; }
-
-      submitBtn.disabled = true;
-      try {
+      status.style.display = 'none';
+      const data = {
+        author: form.author.value.trim(),
+        email: form.email.value.trim(),
+        category: form.category.value.trim(),
+        title: form.title.value.trim(),
+        problem: form.problem.value.trim(),
+        solution_hint: form.solution_hint.value.trim()
+      };
+      if (!data.title || !data.problem || !data.solution_hint) {
+        alert('Please fill required fields');
+        return;
+      }
+      try{
         const res = await fetch(API_BASE + '/api/ideas', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ author, email, category, title, problem, solution_hint })
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(data)
         });
-        if (!res.ok) {
-          const d = await res.json().catch(()=>({}));
-          throw new Error(d.error || 'Failed to submit idea');
+        if(!res.ok) {
+          const err = await res.json().catch(()=>({error:'Failed'}));
+          throw new Error(err.error || 'Failed');
         }
         await res.json();
-        formEl.reset();
-        showSuccess('Your idea has been published publicly on the SOMTRIX&trade; board.');
-      } catch (err) {
+        form.reset();
+        status.style.display = 'block';
+      }catch(err){
+        alert('Unable to submit idea: ' + (err.message || ''));
         console.error(err);
-        showError(err.message || 'Something went wrong. Try again.');
-      } finally {
-        submitBtn.disabled = false;
       }
     });
   </script>
 </body>
 </html>
-
-
-
-
-
-
