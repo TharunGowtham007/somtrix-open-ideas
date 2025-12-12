@@ -4,7 +4,6 @@
   "engines": {
     "node": "20.x"
   },
-
   "description": "Public idea board for open innovation startup",
   "main": "server.js",
   "scripts": {
@@ -13,6 +12,7 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.19.2",
+    "multer": "^2.0.2",
     "sqlite3": "^5.1.7"
   }
 }
