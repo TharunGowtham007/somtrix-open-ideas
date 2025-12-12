@@ -1,86 +1,79 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>SOMTRIX™ — Products</title>
-<style>
-  :root{
-    --bg:#f4f7fb; --card:#fff; --muted:#6c7689; --accent:#7F8CBD;
-    --radius:14px; --shadow:0 10px 30px rgba(16,25,40,0.06); font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;
-  }
-  body{margin:0;background:linear-gradient(145deg,#eef2fb 0,#dfe7ff 40%,#f4f7fb 100%);color:#111;min-height:100vh}
-  .wrap{max-width:1100px;margin:20px auto;padding:16px}
-  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
-  .brand{display:flex;gap:12px;align-items:center}
-  .brand img{width:64px;height:64px;border-radius:50%}
-  .brand h1{font-size:20px;margin:0;letter-spacing:0.06em}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
-  .card{background:var(--card);padding:12px;border-radius:var(--radius);box-shadow:var(--shadow);display:flex;flex-direction:column}
-  .thumb{height:160px;border-radius:10px;overflow:hidden;background:#eee;display:flex;align-items:center;justify-content:center}
-  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
-  .title{font-weight:700;margin-top:10px;font-size:15px}
-  .sub{color:var(--muted);font-size:13px;margin-top:6px}
-  .meta{margin-top:auto;display:flex;justify-content:space-between;align-items:center}
-  .btn{background:var(--accent);color:#fff;padding:8px 10px;border-radius:999px;border:none;cursor:pointer}
-  @media(max-width:640px){ .thumb{height:140px} header{flex-direction:column;align-items:flex-start} }
-</style>
+  <meta charset="utf-8" />
+  <title>SOMTRIX™ — Products</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    /* condensed responsive grid styling for products */
+    :root{
+      --bg:#eef2fb;--card:#fff;--muted:#6c7689;--accent:#7F8CBD;--radius:16px;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    body{margin:0;background:linear-gradient(145deg,#eef2fb,#dfe7ff);color:#111;min-height:100vh}
+    .wrap{max-width:1100px;margin:32px auto;padding:16px}
+    header{display:flex;align-items:center;gap:18px;margin-bottom:18px}
+    .logo{width:68px;height:68px;border-radius:50%;overflow:hidden;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,0.08);display:flex;align-items:center;justify-content:center}
+    .logo img{width:64px;height:64px}
+    nav a{margin-left:18px;color:#6b78a6;text-decoration:underline;text-underline-offset:4px}
+    h1{font-size:26px;margin:0 0 10px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+    .card{background:var(--card);border-radius:14px;padding:14px;border:1px solid rgba(200,210,230,0.6);box-shadow:0 8px 26px rgba(16,25,40,0.06)}
+    .cover{height:140px;border-radius:10px;background:#f2f6ff;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .cover img{width:100%;height:100%;object-fit:cover}
+    .meta{font-size:13px;color:var(--muted);margin-top:8px}
+    .btn{display:inline-block;padding:8px 12px;border-radius:999px;background:var(--accent);color:#fff;text-decoration:none;margin-top:8px}
+    @media(min-width:1000px){.wrap{padding:24px}}
+  </style>
 </head>
 <body>
   <div class="wrap">
     <header>
-      <div class="brand">
-        <img src="logo.png" alt="SOMTRIX logo" onerror="this.style.display='none'"/>
-        <h1>SOMTRIX™ — Products</h1>
+      <div class="logo"><img src="logo.png" alt="SOMTRIX"></div>
+      <div>
+        <div style="font-weight:800;letter-spacing:0.08em">SOMTRIX™</div>
+        <div style="color:var(--muted);font-size:13px">Products & updates</div>
       </div>
-      <nav>
-        <a href="index.html">Home</a> ·
-        <a href="publish.html">Publish</a> ·
-        <a href="vote.html">Vote</a>
+      <nav style="margin-left:auto">
+        <a href="publish.html">Publish idea</a>
+        <a href="vote.html">Vote ideas</a>
+        <a href="index.html">Home</a>
       </nav>
     </header>
 
-    <main>
-      <p style="color:#555;margin-bottom:12px">See product ideas we are tracking. Click any card to view updates and details.</p>
-      <div id="product-grid" class="grid">Loading products…</div>
-    </main>
+    <h1>Products — updates & previews</h1>
+    <p style="color:var(--muted)">Browse products SOMTRIX is working on. Click a product to view updates and comments.</p>
+
+    <div id="grid" class="grid" aria-live="polite"></div>
+
+    <div id="empty" style="display:none;margin-top:18px;color:var(--muted)">No products yet.</div>
   </div>
 
-<script>
-const API_BASE = '';
-async function loadProducts(){
-  const grid = document.getElementById('product-grid');
-  grid.innerHTML = 'Loading products…';
-  try{
-    const res = await fetch(`${API_BASE}/api/products`);
-    if(!res.ok) throw new Error('Failed to load');
-    const rows = await res.json();
-    if(!rows || rows.length===0){ grid.innerHTML = '<div style="padding:20px;color:#666">No products yet.</div>'; return; }
-    grid.innerHTML = '';
-    rows.forEach(p=>{
-      const div = document.createElement('div');
-      div.className = 'card';
-      const imgUrl = (p.images && p.images.length) ? p.images[0] : '';
-      div.innerHTML = `
-        <div class="thumb">${imgUrl ? `<img src="${imgUrl}" alt="${escapeHtml(p.name)}">` : '<div style="color:#888">No image</div>'}</div>
-        <div class="title">${escapeHtml(p.name)}</div>
-        <div class="sub">${escapeHtml(p.creator || '')}</div>
-        <div class="meta">
-          <div class="small" style="color:${'#6c7689'}">${p.release_date ? 'Releases: '+escapeHtml(p.release_date) : ''}</div>
-          <button class="btn" data-id="${p.id}">Open</button>
-        </div>`;
-      grid.appendChild(div);
-      div.querySelector('button').addEventListener('click', ()=> {
-        window.location = `product.html?id=${p.id}`;
-      });
-    });
-  }catch(e){
-    console.error(e);
-    document.getElementById('product-grid').innerHTML = '<div style="padding:20px;color:#b00">Failed to load products</div>';
-  }
-}
-function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-document.addEventListener('DOMContentLoaded', loadProducts);
-</script>
+  <script>
+    async function loadProducts(){
+      try{
+        const res = await fetch('/api/products');
+        if(!res.ok) throw new Error('Failed to load');
+        const items = await res.json();
+        const grid = document.getElementById('grid');
+        grid.innerHTML = '';
+        if(!items || items.length === 0){
+          document.getElementById('empty').style.display='block';
+          return;
+        }
+        items.forEach(p=>{
+          const card = document.createElement('article');
+          card.className='card';
+          const coverHtml = p.cover ? `<div class="cover"><img src="${p.cover}" alt=""></div>` : `<div class="cover"><div style="color:#7f8cbd">No image</div></div>`;
+          card.innerHTML = `${coverHtml}<h3 style="margin:10px 0 4px">${p.name}</h3><div class="meta">${p.short_desc || ''}</div><div class="meta">Status: ${p.status || '—'}</div><a class="btn" href="product.html?id=${p.id}">View</a>`;
+          grid.appendChild(card);
+        });
+      }catch(e){
+        document.getElementById('grid').innerHTML = '<div style="color:#b00">Unable to load products</div>';
+        console.error(e);
+      }
+    }
+    document.addEventListener('DOMContentLoaded', loadProducts);
+  </script>
 </body>
 </html>

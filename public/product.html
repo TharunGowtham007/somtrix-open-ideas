@@ -1,96 +1,122 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>SOMTRIX™ — Product</title>
-<style>
-  :root{--bg:#f4f7fb;--card:#fff;--accent:#7F8CBD;--muted:#6c7689;--radius:12px;--shadow:0 10px 30px rgba(16,25,40,0.06);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial}
-  body{margin:0;background:linear-gradient(145deg,#eef2fb 0,#dfe7ff 40%,#f4f7fb 100%);color:#111}
-  .wrap{max-width:980px;margin:18px auto;padding:16px}
-  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-  .brand{display:flex;gap:12px;align-items:center}
-  .brand img{width:52px;height:52px;border-radius:50%}
-  .title{font-size:20px;margin:0}
-  .grid{display:grid;grid-template-columns:1fr 320px;gap:12px}
-  .card{background:var(--card);padding:12px;border-radius:var(--radius);box-shadow:var(--shadow)}
-  .gallery{display:flex;gap:8px;flex-wrap:wrap}
-  .gallery img{width:100%;max-height:320px;object-fit:cover;border-radius:8px}
-  .updates{margin-top:12px;display:flex;flex-direction:column;gap:10px}
-  .update{border-radius:8px;padding:10px;background:#fbfcff;border:1px solid #e8eefb}
-  @media(max-width:900px){ .grid{grid-template-columns:1fr} .gallery img{max-height:220px} }
-</style>
+  <meta charset="utf-8" />
+  <title>SOMTRIX™ — Product</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root{--bg:#eef2fb;--card:#fff;--muted:#6c7689;--accent:#7F8CBD}
+    body{margin:0;background:linear-gradient(145deg,#eef2fb,#dfe7ff);font-family:system-ui,Segoe UI,Roboto,Arial;color:#111}
+    .wrap{max-width:980px;margin:28px auto;padding:14px}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+    .logo{width:64px;height:64px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center}
+    nav a{margin-left:14px;color:#6b78a6;text-decoration:underline}
+    .hero{display:flex;gap:16px;align-items:flex-start}
+    .gallery{width:320px;border-radius:12px;overflow:hidden;background:#fafbff;border:1px solid rgba(200,210,230,0.6)}
+    .gallery img{width:100%;height:260px;object-fit:cover}
+    .detail{flex:1}
+    .update{background:var(--card);padding:12px;border-radius:10px;margin-top:10px;border:1px solid rgba(200,210,230,0.6)}
+    .comment-form textarea{width:100%;min-height:80px;padding:8px;border-radius:8px;border:1px solid #d8dfef}
+    .btn{display:inline-block;padding:8px 12px;border-radius:999px;background:var(--accent);color:#fff;text-decoration:none}
+  </style>
 </head>
 <body>
   <div class="wrap">
     <header>
-      <div class="brand"><img src="logo.png" alt="logo" onerror="this.style.display='none'"><h1 class="title">SOMTRIX™ — Product details</h1></div>
-      <nav><a href="products.html">Products</a> · <a href="vote.html">Ideas</a></nav>
+      <div class="logo"><img src="logo.png" style="width:50px;height:50px"></div>
+      <div>
+        <div style="font-weight:800">SOMTRIX™</div>
+        <div style="color:var(--muted);font-size:13px">Product details & updates</div>
+      </div>
+      <nav style="margin-left:auto">
+        <a href="products.html">Products</a>
+        <a href="publish.html">Publish idea</a>
+        <a href="vote.html">Vote ideas</a>
+      </nav>
     </header>
 
-    <div class="grid">
-      <div class="card" id="main-col">
-        <div id="product-area">Loading product…</div>
-        <div id="updates-area"></div>
-      </div>
-
-      <aside class="card">
-        <h3 id="aside-name">—</h3>
-        <div id="aside-meta" style="color:var(--muted);font-size:13px"></div>
-        <div id="aside-price" style="margin-top:10px;font-weight:700"></div>
-      </aside>
-    </div>
+    <main id="main">
+      <div id="loading">Loading product...</div>
+    </main>
   </div>
 
 <script>
-const API_BASE = '';
-function qs(key){ const u=new URL(location.href); return u.searchParams.get(key); }
-
-async function loadProduct(){
-  const id = qs('id');
-  if(!id){ document.getElementById('product-area').innerHTML = '<div style="color:#b00">Missing product id.</div>'; return; }
-  try{
-    const res = await fetch(`${API_BASE}/api/products/${id}`);
-    if(!res.ok) throw new Error('Failed to load');
-    const json = await res.json();
-    const p = json.product;
-    const updates = json.updates || [];
-
-    document.getElementById('aside-name').textContent = p.name;
-    document.getElementById('aside-meta').textContent = p.creator || '';
-    document.getElementById('aside-price').textContent = p.price ? 'Price: '+p.price : '';
-
-    const area = document.getElementById('product-area');
-    const imgs = (p.images || []);
-    let galleryHtml = '';
-    if(imgs.length){
-      galleryHtml = '<div class="gallery">'+imgs.map(i=>`<img src="${i}" alt="">`).join('')+'</div>';
-    }
-    area.innerHTML = `<h2 style="margin:0">${escapeHtml(p.name)}</h2>
-                      <div style="color:var(--muted);margin-top:6px">${escapeHtml(p.description || '')}</div>
-                      ${galleryHtml}`;
-
-    const ua = document.getElementById('updates-area');
-    ua.innerHTML = '<h3 style="margin-top:14px">Updates</h3>';
-    if(!updates.length) ua.innerHTML += '<div style="color:#666">No updates yet.</div>';
-    updates.forEach(u=>{
-      const div = document.createElement('div'); div.className='update';
-      const imgsHtml = (u.images||[]).map(i=>`<img src="${i}" style="max-width:100%;display:block;margin-top:8px;border-radius:6px">`).join('');
-      div.innerHTML = `<div style="font-weight:700">${escapeHtml(u.title)}</div>
-                       <div style="color:var(--muted);font-size:13px;margin-top:6px">${escapeHtml(u.body)}</div>
-                       ${imgsHtml}
-                       <div style="font-size:11px;color:#999;margin-top:6px">${escapeHtml(u.created_at)}</div>`;
-      ua.appendChild(div);
+  function q(s){return new URLSearchParams(location.search).get(s)}
+  const id = q('id');
+  if(!id){
+    document.getElementById('main').innerHTML = '<div style="color:#b00">Product id missing</div>';
+  } else {
+    fetch(`/api/products/${id}`).then(r=>r.json()).then(product=>{
+      if(product.error) throw new Error(product.error || 'Not found');
+      render(product);
+    }).catch(e=>{
+      document.getElementById('main').innerHTML = `<div style="color:#b00">Unable to load: ${e.message}</div>`;
     });
-
-  }catch(e){
-    console.error(e);
-    document.getElementById('product-area').innerHTML = '<div style="color:#b00">Failed to load product.</div>';
   }
-}
-function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-document.addEventListener('DOMContentLoaded', loadProduct);
+  function render(p){
+    const m = document.getElementById('main');
+    const galleryHtml = (p.images && p.images.length) ? `<div class="gallery"><img src="${p.images[0]}" alt=""></div>` : `<div class="gallery" style="display:flex;align-items:center;justify-content:center;color:#7f8cbd">No image</div>`;
+    let html = `<div class="hero">${galleryHtml}<div class="detail"><h1>${p.name}</h1><div style="color:#6c7689">${p.short_desc||''}</div><div style="margin-top:10px">${p.long_desc||''}</div><div style="margin-top:12px;color:var(--muted)">Status: ${p.status||'—'} • Release: ${p.release_date||'—'} • Price: ${p.price||'—'}</div></div></div>`;
+    html += '<section style="margin-top:18px"><h3>Updates</h3>';
+    if(p.updates && p.updates.length){
+      p.updates.forEach(u=>{
+        html += `<div class="update"><div style="font-weight:700">${u.title||'Update'}</div><div style="color:var(--muted);font-size:12px">${u.created_at}</div><div style="margin-top:8px">${u.body||''}</div>`;
+        if(u.images && u.images.length){
+          html += '<div style="display:flex;gap:8px;margin-top:8px">';
+          u.images.forEach(img => html += `<img src="${img}" style="width:120px;height:80px;object-fit:cover;border-radius:6px">`);
+          html += '</div>';
+        }
+        html += '</div>';
+      });
+    } else {
+      html += '<div style="color:var(--muted)">No updates yet.</div>';
+    }
+    html += '</section>';
+
+    // comments
+    html += `<section style="margin-top:18px"><h3>Comments</h3><div id="comments"></div><div style="margin-top:8px"><form id="comment-form"><input id="author" placeholder="Your name (optional)" style="width:100%;padding:8px;border-radius:8px;border:1px solid #d8dfef"><div style="height:8px"></div><textarea id="content" placeholder="Share your thoughts" style="width:100%;padding:8px;border-radius:8px;border:1px solid #d8dfef"></textarea><div style="height:8px"></div><button class="btn" type="submit">Post comment</button></form></div></section>`;
+
+    m.innerHTML = html;
+
+    const commentsContainer = document.getElementById('comments');
+    if(p.comments && p.comments.length){
+      p.comments.forEach(c => {
+        const el = document.createElement('div');
+        el.style.borderTop = '1px solid rgba(200,210,230,0.6)';
+        el.style.padding = '8px 0';
+        el.innerHTML = `<div style="font-weight:600">${c.author||'Anonymous'} <span style="color:var(--muted);font-size:12px">• ${c.created_at}</span></div><div style="margin-top:6px">${c.content}</div>`;
+        commentsContainer.appendChild(el);
+      });
+    } else {
+      commentsContainer.innerHTML = '<div style="color:var(--muted)">No comments yet.</div>';
+    }
+
+    // comment submit
+    document.getElementById('comment-form').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const author = document.getElementById('author').value;
+      const content = document.getElementById('content').value;
+      if(!content || !content.trim()){ alert('Write a comment'); return; }
+      try{
+        const res = await fetch(`/api/products/${p.id}/comments`, {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ author, content })
+        });
+        if(!res.ok) throw new Error('Failed to submit');
+        const c = await res.json();
+        // prepend comment
+        const el = document.createElement('div');
+        el.style.borderTop = '1px solid rgba(200,210,230,0.6)';
+        el.style.padding = '8px 0';
+        el.innerHTML = `<div style="font-weight:600">${c.author||'Anonymous'} <span style="color:var(--muted);font-size:12px">• ${c.created_at}</span></div><div style="margin-top:6px">${c.content}</div>`;
+        commentsContainer.insertBefore(el, commentsContainer.firstChild);
+        document.getElementById('content').value = '';
+        document.getElementById('author').value = '';
+      }catch(err){ alert('Unable to post comment'); console.error(err); }
+    });
+  }
 </script>
 </body>
 </html>

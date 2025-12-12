@@ -1,0 +1,155 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>SOMTRIX™ Admin — Products</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root{--card:#fff;--muted:#6c7689;--accent:#7F8CBD}
+    body{font-family:system-ui,Segoe UI,Roboto,Arial;background:linear-gradient(145deg,#eef2fb,#dfe7ff);margin:0;color:#111}
+    .wrap{max-width:1100px;margin:22px auto;padding:16px}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+    .logo{width:56px;height:56px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center}
+    .grid{display:grid;grid-template-columns:1fr 380px;gap:16px}
+    .card{background:var(--card);padding:14px;border-radius:12px;border:1px solid rgba(200,210,230,0.6)}
+    input,textarea,select{width:100%;padding:8px;margin-top:6px;border-radius:8px;border:1px solid #d8dfef}
+    label{font-size:12px;color:var(--muted);display:block;margin-top:10px}
+    .btn{display:inline-block;padding:8px 12px;background:var(--accent);color:#fff;border-radius:999px;text-decoration:none}
+    .product-row{display:flex;gap:10px;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(200,210,230,0.6);padding:10px 0}
+    .small{font-size:12px;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo"><img src="logo.png" alt="SOMTRIX" style="width:44px"></div>
+      <div><div style="font-weight:800">SOMTRIX™ Admin</div><div style="color:var(--muted)">Manage products & updates</div></div>
+      <div style="margin-left:auto"><a href="index.html">Back to site</a></div>
+    </header>
+
+    <div style="margin-bottom:10px">
+      <label>Admin key (required to perform actions)</label>
+      <input id="admin-key" placeholder="Paste admin key here (or append ?admin_key=... in URL)">
+    </div>
+
+    <div class="grid">
+      <div>
+        <div class="card">
+          <h3>Create product</h3>
+          <form id="product-form">
+            <label>Name</label><input id="p-name" required>
+            <label>Short description</label><input id="p-short">
+            <label>Long description</label><textarea id="p-long"></textarea>
+            <label>Status</label><input id="p-status" placeholder="In development, Prototype, Released...">
+            <label>Release date</label><input id="p-release" placeholder="YYYY-MM-DD">
+            <label>Price</label><input id="p-price">
+            <label>Creator</label><input id="p-creator">
+            <label>Images (choose files)</label><input id="p-images" type="file" multiple accept="image/*">
+            <div style="height:8px"></div>
+            <button class="btn" type="submit">Create product</button>
+            <div id="prod-msg" style="margin-top:8px;color:green;display:none">Product created</div>
+          </form>
+        </div>
+
+        <div class="card" style="margin-top:12px">
+          <h3>Post update for a product</h3>
+          <form id="update-form">
+            <label>Select product</label><select id="upd-product"></select>
+            <label>Title</label><input id="upd-title">
+            <label>Body</label><textarea id="upd-body"></textarea>
+            <label>Images</label><input id="upd-images" type="file" multiple accept="image/*">
+            <div style="height:8px"></div>
+            <button class="btn" type="submit">Post update</button>
+            <div id="upd-msg" style="margin-top:8px;color:green;display:none">Update posted</div>
+          </form>
+        </div>
+      </div>
+
+      <aside>
+        <div class="card">
+          <h3>Existing products</h3>
+          <div id="product-list"></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+<script>
+  const adminKeyInput = document.getElementById('admin-key');
+
+  function adminHeaders(){
+    const headers = {};
+    const key = (adminKeyInput.value || (new URLSearchParams(location.search).get('admin_key') || '')).trim();
+    if(key) headers['x-admin-key'] = key;
+    return headers;
+  }
+
+  async function loadProducts(){
+    const res = await fetch('/api/admin/products', { headers: adminHeaders() });
+    if(!res.ok){ document.getElementById('product-list').innerHTML = '<div style="color:#b00">Admin key required</div>'; return; }
+    const items = await res.json();
+    const sel = document.getElementById('upd-product');
+    sel.innerHTML = '';
+    const list = document.getElementById('product-list');
+    list.innerHTML = '';
+    items.forEach(p=>{
+      const opt = document.createElement('option'); opt.value=p.id; opt.textContent = p.name; sel.appendChild(opt);
+      const row = document.createElement('div'); row.className='product-row';
+      row.innerHTML = `<div><div style="font-weight:700">${p.name}</div><div class="small">${p.short_desc||''}</div></div>
+        <div><button class="btn" data-id="${p.id}" onclick="deleteProduct(${p.id})" style="background:#b33">Delete</button></div>`;
+      list.appendChild(row);
+    });
+  }
+
+  async function deleteProduct(id){
+    if(!confirm('Delete product and all updates/comments?')) return;
+    const res = await fetch(`/api/admin/products/${id}`, { method: 'DELETE', headers: adminHeaders() });
+    if(!res.ok){ alert('Delete failed'); return; }
+    await loadProducts();
+  }
+
+  // create product
+  document.getElementById('product-form').addEventListener('submit', async (ev)=>{
+    ev.preventDefault();
+    const fd = new FormData();
+    fd.append('name', document.getElementById('p-name').value);
+    fd.append('short_desc', document.getElementById('p-short').value);
+    fd.append('long_desc', document.getElementById('p-long').value);
+    fd.append('status', document.getElementById('p-status').value);
+    fd.append('release_date', document.getElementById('p-release').value);
+    fd.append('price', document.getElementById('p-price').value);
+    fd.append('creator', document.getElementById('p-creator').value);
+    const files = document.getElementById('p-images').files;
+    for(let i=0;i<files.length;i++) fd.append('images', files[i]);
+
+    const res = await fetch('/api/admin/products', { method:'POST', body: fd, headers: adminHeaders() });
+    if(!res.ok){ alert('Create failed - check admin key and inputs'); return; }
+    document.getElementById('prod-msg').style.display='block';
+    setTimeout(()=>document.getElementById('prod-msg').style.display='none',2000);
+    document.getElementById('product-form').reset();
+    await loadProducts();
+  });
+
+  // post update
+  document.getElementById('update-form').addEventListener('submit', async (ev)=>{
+    ev.preventDefault();
+    const pid = document.getElementById('upd-product').value;
+    if(!pid){ alert('Select product'); return; }
+    const fd = new FormData();
+    fd.append('title', document.getElementById('upd-title').value);
+    fd.append('body', document.getElementById('upd-body').value);
+    const files = document.getElementById('upd-images').files;
+    for(let i=0;i<files.length;i++) fd.append('images', files[i]);
+    const res = await fetch(`/api/admin/products/${pid}/updates`, { method:'POST', body: fd, headers: adminHeaders() });
+    if(!res.ok){ alert('Post update failed'); return; }
+    document.getElementById('upd-msg').style.display='block';
+    setTimeout(()=>document.getElementById('upd-msg').style.display='none',2000);
+    document.getElementById('update-form').reset();
+  });
+
+  // reload when admin key typed
+  adminKeyInput.addEventListener('change', loadProducts);
+  document.addEventListener('DOMContentLoaded', loadProducts);
+</script>
+</body>
+</html>
