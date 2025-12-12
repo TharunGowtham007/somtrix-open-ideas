@@ -1,191 +1,308 @@
-﻿<!doctype html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   <title>SOMTRIX&trade; Admin — Ideas</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Inter",sans-serif;margin:0;background:#f6f8fb;color:#111}
-    .wrap{max-width:1100px;margin:18px auto;padding:18px}
-    header{display:flex;justify-content:space-between;align-items:center;gap:12px}
-    .btn{padding:8px 14px;border-radius:8px;border:none;cursor:pointer}
-    .input{padding:8px;border-radius:8px;border:1px solid #d6dbe6}
-    table{width:100%;border-collapse:collapse;margin-top:12px}
-    th,td{padding:10px;border-bottom:1px solid #e6e9f0;text-align:left;font-size:13px}
-    .danger{background:#ff6b6b;color:#fff}
+    :root{
+      --bg:#f4f7fb; --card:#fff; --muted:#6c7689; --accent:#7F8CBD; --bad:#e85b5b;
+      --radius:12px; --shadow:0 10px 30px rgba(16,25,40,0.08); font-family:system-ui,Inter,Arial;
+    }
+    body{margin:0;background:linear-gradient(145deg,#eef2fb 0,#dfe7ff 40%,#f4f7fb 100%);color:#111;padding:18px;}
+    .wrap{max-width:1100px;margin:12px auto;}
+    header{display:flex;align-items:center;gap:16px;margin-bottom:14px}
+    .logo{width:66px;height:66px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,0.08)}
+    .logo img{width:160%;height:160%;object-fit:cover}
+    h2{margin:0;font-size:20px}
+    .small{color:var(--muted);font-size:13px}
+    .controls{display:flex;gap:10px;align-items:center;margin:14px 0;flex-wrap:wrap}
+    .input,select{padding:8px 10px;border-radius:999px;border:1px solid #e1e7f2;background:#fff;min-height:38px}
+    .btn{padding:8px 12px;border-radius:10px;background:var(--accent);color:#fff;border:none;cursor:pointer}
+    .btn-ghost{background:#fff;border:1px solid #d6ddea;color:#2c3e50}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:12px}
+    .card{background:var(--card);border-radius:12px;padding:10px;border:1px solid #e6edf8;box-shadow:var(--shadow);display:flex;flex-direction:column;min-height:160px}
+    .meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+    .title{font-weight:700;font-size:15px;margin-bottom:6px}
+    .txt{color:var(--muted);font-size:13px;line-height:1.35;max-height:5.2em;overflow:hidden}
+    .badge{font-size:11px;padding:6px 8px;border-radius:999px;background:#f7f9ff;color:#5f6ea8}
+    .footer{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+    .email{font-size:12px;color:#2c3e50}
+    .danger{background:var(--bad);color:#fff;border:none;padding:6px 10px;border-radius:8px;cursor:pointer}
+    .search-wrap{display:flex;gap:8px;align-items:center}
+    .count{font-size:13px;color:var(--muted)}
+    .empty{padding:22px;border-radius:12px;background:#fff;border:1px dashed #e6edf8;text-align:center;color:var(--muted)}
+    .topbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+    @media(max-width:720px){.grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
+      <div class="logo"><img src="logo.png" alt="SOMTRIX logo" onerror="this.style.display='none'"></div>
       <div>
         <h2>SOMTRIX&trade; — Admin dashboard</h2>
-        <div style="color:#666;font-size:13px">Only you should access this. Keep your admin key secret.</div>
-      </div>
-      <div style="display:flex;gap:8px;align-items:center">
-        <input id="adminKeyInput" class="input" placeholder="Enter admin key" style="min-width:260px">
-        <button id="btnLogin" class="btn">Login</button>
-        <button id="btnLogout" class="btn" style="display:none">Logout</button>
+        <div class="small">View, filter by category, export or remove ideas. Admin-only.</div>
       </div>
     </header>
 
-    <section style="margin-top:14px;display:flex;gap:8px;align-items:center">
-      <input id="q" class="input" placeholder="Search title or author" style="flex:1">
-      <select id="adminCategoryFilter" class="input">
-        <option value="">All categories</option>
-        <option>Apparel / Clothes</option><option>Kitchen</option><option>Home</option><option>Electronics</option>
-        <option>Health &amp; Wellness</option><option>Transport</option><option>Education</option><option>Energy</option>
-        <option>Food &amp; Beverage</option><option>Sports</option><option>Toys &amp; Games</option><option>Office</option>
-        <option>Gardening</option><option>Construction</option><option>Beauty &amp; Personal Care</option><option>Pet Care</option>
-        <option>Finance</option><option>Software</option><option>Services</option><option>Other</option>
-      </select>
-      <button id="btnRefresh" class="btn">Refresh</button>
-      <button id="btnExport" class="btn">Export JSON</button>
-    </section>
+    <div class="main">
+      <div class="topbar">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <div class="search-wrap">
+            <input id="adminKey" class="input" placeholder="Enter admin key" style="width:260px" />
+            <button id="saveKey" class="btn-ghost">Save</button>
+            <button id="clearKey" class="btn-ghost" title="Clear stored key">Clear</button>
+          </div>
 
-    <div id="status" style="margin-top:10px;color:#444"></div>
+          <select id="categorySelect" class="input" style="min-width:220px">
+            <option value="">— All categories —</option>
+          </select>
 
-    <table id="ideasTable" style="display:none">
-      <thead><tr><th>ID</th><th>Title</th><th>Category</th><th>Author</th><th>Email</th><th>Votes</th><th>Created</th><th>Actions</th></tr></thead>
-      <tbody id="ideasBody"></tbody>
-    </table>
+          <input id="search" class="input" placeholder="Search title / author / email" style="min-width:220px" />
+          <select id="sort" class="input">
+            <option value="new">Newest first</option>
+            <option value="top">Most supports</option>
+          </select>
+        </div>
+
+        <div style="display:flex;gap:8px;align-items:center">
+          <div class="count" id="count">Loading…</div>
+          <button id="refresh" class="btn">Refresh</button>
+          <button id="exportBtn" class="btn-ghost">Download JSON</button>
+        </div>
+      </div>
+
+      <div id="list" style="margin-top:12px"></div>
+    </div>
   </div>
 
-  <script>
-    const API_BASE = '';
-    const adminKeyStorage = 'SOMTRIX&trade;_admin_key';
+<script>
+  // CONFIG
+  const API_BASE = "";
+  const STORAGE_KEY = "somtrix_admin_key";
 
-    function setStatus(msg, err) {
-      const s = document.getElementById('status');
-      s.textContent = msg || '';
-      s.style.color = err ? '#900' : '#444';
-    }
+  // UI elements
+  const adminKeyEl = document.getElementById("adminKey");
+  const saveKeyBtn = document.getElementById("saveKey");
+  const clearKeyBtn = document.getElementById("clearKey");
+  const categorySelect = document.getElementById("categorySelect");
+  const searchEl = document.getElementById("search");
+  const sortEl = document.getElementById("sort");
+  const refreshBtn = document.getElementById("refresh");
+  const listEl = document.getElementById("list");
+  const countEl = document.getElementById("count");
+  const exportBtn = document.getElementById("exportBtn");
 
-    function saveKey(k) { sessionStorage.setItem(adminKeyStorage, k); }
-    function loadKey() { return sessionStorage.getItem(adminKeyStorage) || ''; }
-    function clearKey() { sessionStorage.removeItem(adminKeyStorage); }
+  // state
+  let ideas = [];
+  let adminKey = localStorage.getItem(STORAGE_KEY) || "";
 
-    async function fetchIdeas() {
-      const key = loadKey();
-      if (!key) { setStatus('Not authenticated'); return; }
-      setStatus('Loading ideas...');
-      const cat = document.getElementById('adminCategoryFilter').value || '';
-      let url = '/api/admin/ideas';
-      if (cat) url += '?category=' + encodeURIComponent(cat);
-      try {
-        const res = await fetch(url, { headers: { 'x-admin-key': key }});
-        if (!res.ok) {
-          if (res.status === 403) { setStatus('Admin access denied — check key', true); return; }
-          throw new Error('Failed to fetch');
-        }
-        const rows = await res.json();
-        renderTable(rows);
-        setStatus('Loaded ' + rows.length + ' ideas');
-      } catch (err) {
-        console.error(err);
-        setStatus('Failed to load ideas: ' + (err.message||''), true);
+  // init
+  adminKeyEl.value = adminKey;
+
+  function requireKey() {
+    const k = adminKeyEl.value.trim();
+    if (!k) { alert("Enter admin key first"); return null; }
+    return k;
+  }
+
+  function setAdminKey(k) {
+    adminKey = k || "";
+    if (adminKey) localStorage.setItem(STORAGE_KEY, adminKey);
+    else localStorage.removeItem(STORAGE_KEY);
+    adminKeyEl.value = adminKey;
+  }
+
+  saveKeyBtn.addEventListener("click", () => {
+    const k = adminKeyEl.value.trim();
+    if (!k) return alert("Please enter a key");
+    setAdminKey(k);
+    loadIdeas();
+  });
+
+  clearKeyBtn.addEventListener("click", () => {
+    if (!confirm("Clear stored admin key from this browser?")) return;
+    setAdminKey("");
+    alert("Cleared. You must re-enter the key to use admin features.");
+  });
+
+  // load ideas (admin)
+  async function loadIdeas() {
+    const k = adminKey || adminKeyEl.value.trim();
+    if (!k) { listEl.innerHTML = '<div class="empty">Please enter and save admin key to load admin ideas.</div>'; return; }
+
+    try {
+      countEl.textContent = "Loading…";
+      listEl.innerHTML = "";
+      const res = await fetch(`${API_BASE}/api/admin/ideas?admin_key=${encodeURIComponent(k)}`);
+      if (!res.ok) {
+        const d = await res.json().catch(()=>({error:"Failed"}));
+        throw new Error(d.error || ("HTTP " + res.status));
       }
+      ideas = await res.json();
+
+      // populate categories
+      const cats = Array.from(new Set(ideas.map(i => (i.category || "").trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b));
+      categorySelect.innerHTML = '<option value="">— All categories —</option>' + cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+
+      renderList();
+    } catch (err) {
+      console.error(err);
+      listEl.innerHTML = `<div class="empty">Failed to load admin ideas: ${escapeHtml(String(err.message || err))}</div>`;
+      countEl.textContent = "Error";
     }
+  }
 
-    function renderTable(rows) {
-      const table = document.getElementById('ideasTable');
-      const body = document.getElementById('ideasBody');
-      body.innerHTML = '';
-      rows.forEach(r => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${r.id}</td>
-          <td style="max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(r.title)}</td>
-          <td>${escapeHtml(r.category||'')}</td>
-          <td>${escapeHtml(r.author||'Anonymous')}</td>
-          <td>${escapeHtml(r.email||'')}</td>
-          <td style="font-weight:600">${r.votes||0}</td>
-          <td>${r.created_at||''}</td>
-          <td>
-            <button data-id="${r.id}" class="btn view">View</button>
-            <button data-id="${r.id}" class="btn danger delete">Delete</button>
-          </td>
-        `;
-        body.appendChild(tr);
-      });
-      table.style.display = rows.length ? '' : 'none';
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-      // wire buttons
-      document.querySelectorAll('button.view').forEach(b=>{
-        b.addEventListener('click', ()=> {
-          const id = b.getAttribute('data-id');
-          window.open('/vote.html', '_blank'); // quick
-          setStatus('Use vote page to inspect ID #' + id);
-        });
-      });
-      document.querySelectorAll('button.delete').forEach(b=>{
-        b.addEventListener('click', ()=> confirmDelete(Number(b.getAttribute('data-id'))));
-      });
-    }
+  function renderList() {
+    const q = (searchEl.value||"").trim().toLowerCase();
+    const cat = (categorySelect.value||"").trim();
+    const sort = sortEl.value || "top";
 
-    function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-
-    async function confirmDelete(id) {
-      if (!confirm('Delete idea ID #' + id + ' ? This is permanent.')) return;
-      const key = loadKey();
-      if (!key) return setStatus('Not authenticated', true);
-      try {
-        const res = await fetch('/api/admin/ideas/' + id + '?admin_key=' + encodeURIComponent(key), { method: 'DELETE' });
-        if (!res.ok) {
-          const d = await res.json().catch(()=>({}));
-          throw new Error(d.error || 'Delete failed');
-        }
-        setStatus('Deleted ID #' + id);
-        fetchIdeas();
-      } catch (err) {
-        console.error(err);
-        setStatus('Delete failed: ' + (err.message||''), true);
-      }
-    }
-
-    document.getElementById('btnLogin').addEventListener('click', ()=> {
-      const k = document.getElementById('adminKeyInput').value.trim();
-      if (!k) return alert('Enter admin key');
-      saveKey(k);
-      document.getElementById('btnLogin').style.display='none';
-      document.getElementById('btnLogout').style.display='';
-      document.getElementById('adminKeyInput').value = '';
-      fetchIdeas();
+    let filtered = ideas.filter(i => {
+      if (cat && ((i.category||"").trim() !== cat)) return false;
+      if (!q) return true;
+      return (i.title||"").toLowerCase().includes(q) || (i.author||"").toLowerCase().includes(q) || (i.email||"").toLowerCase().includes(q);
     });
 
-    document.getElementById('btnLogout').addEventListener('click', ()=> {
-      clearKey();
-      document.getElementById('btnLogin').style.display='';
-      document.getElementById('btnLogout').style.display='none';
-      setStatus('Logged out');
-      document.getElementById('ideasBody').innerHTML='';
-      document.getElementById('ideasTable').style.display='none';
+    if (sort === "new") filtered.sort((a,b)=> new Date(b.created_at) - new Date(a.created_at));
+    else filtered.sort((a,b)=> (b.votes||0)-(a.votes||0) || new Date(b.created_at) - new Date(a.created_at));
+
+    countEl.textContent = `${filtered.length} ideas (showing ${filtered.length} of ${ideas.length})`;
+
+    if (filtered.length === 0) {
+      listEl.innerHTML = `<div class="empty">No ideas for selected filters.</div>`;
+      return;
+    }
+
+    const html = document.createElement("div");
+    html.className = "grid";
+
+    filtered.forEach(item => {
+      const card = document.createElement("div");
+      card.className = "card";
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+
+      const idTitle = document.createElement("div");
+      idTitle.innerHTML = `<div style="font-size:12px;color:var(--muted)">ID #${escapeHtml(item.id)}</div>`;
+
+      const badge = document.createElement("div");
+      badge.innerHTML = `<div class="badge">${escapeHtml(item.category || "Uncategorized")}</div>`;
+
+      meta.appendChild(idTitle);
+      meta.appendChild(badge);
+
+      const title = document.createElement("div");
+      title.className = "title";
+      title.textContent = item.title || "(no title)";
+
+      const author = document.createElement("div");
+      author.className = "small";
+      author.textContent = (item.author||"Anonymous") + " · " + (new Date(item.created_at)).toLocaleString();
+
+      const problem = document.createElement("div");
+      problem.className = "txt";
+      problem.textContent = item.problem || "";
+
+      const solution = document.createElement("div");
+      solution.className = "txt";
+      solution.style.marginTop = "8px";
+      solution.textContent = "Hint: " + (item.solution_hint||"");
+
+      const footer = document.createElement("div");
+      footer.className = "footer";
+
+      const left = document.createElement("div");
+      left.innerHTML = `<div class="email">${escapeHtml(item.email || "— no email —")}</div>`;
+
+      const right = document.createElement("div");
+      right.style.display = "flex";
+      right.style.gap = "8px";
+      right.style.alignItems = "center";
+
+      const votes = document.createElement("div");
+      votes.className = "badge";
+      votes.textContent = (item.votes || 0) + " supports";
+
+      const del = document.createElement("button");
+      del.className = "danger";
+      del.textContent = "Delete";
+      del.addEventListener("click", ()=> adminDelete(item.id, item.title));
+
+      right.appendChild(votes);
+      right.appendChild(del);
+
+      footer.appendChild(left);
+      footer.appendChild(right);
+
+      card.appendChild(meta);
+      card.appendChild(title);
+      card.appendChild(author);
+      card.appendChild(problem);
+      card.appendChild(solution);
+      card.appendChild(footer);
+
+      html.appendChild(card);
     });
 
-    document.getElementById('btnRefresh').addEventListener('click', fetchIdeas);
-    document.getElementById('btnExport').addEventListener('click', ()=> {
-      const k = loadKey();
-      if (!k) return alert('Login first');
-      // trigger download
-      window.location = '/api/admin/export?admin_key=' + encodeURIComponent(k);
-    });
+    listEl.innerHTML = "";
+    listEl.appendChild(html);
+  }
 
-    // quick: try session key
-    (function init() {
-      const k = loadKey();
-      if (k) {
-        document.getElementById('btnLogin').style.display='none';
-        document.getElementById('btnLogout').style.display='';
-        setStatus('Authenticated (session)');
-        fetchIdeas();
+  async function adminDelete(id, title) {
+    if (!confirm(`Delete idea ID #${id} — "${title}" ? This cannot be undone.`)) return;
+    const k = adminKey || adminKeyEl.value.trim();
+    if (!k) return alert("No admin key. Save it first.");
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/ideas/${encodeURIComponent(id)}?admin_key=${encodeURIComponent(k)}`, {
+        method: "DELETE"
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(()=>({error:"Failed"}));
+        throw new Error(d.error || res.statusText || "Delete failed");
       }
-    })();
-  </script>
+      alert("Deleted.");
+      // refresh local list
+      loadIdeas();
+    } catch (err) {
+      console.error(err);
+      alert("Delete failed: " + (err.message||err));
+    }
+  }
+
+  // export (download JSON of filtered view)
+  exportBtn.addEventListener("click", async ()=>{
+    const k = adminKey || adminKeyEl.value.trim();
+    if (!k) return alert("Save admin key to export");
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/ideas?admin_key=${encodeURIComponent(k)}`);
+      if (!res.ok) throw new Error("Export failed");
+      const all = await res.json();
+      const blob = new Blob([JSON.stringify(all, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `somtrix-ideas-export-${new Date().toISOString().replace(/[:.]/g,'-')}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (err) {
+      console.error(err);
+      alert("Export failed: " + (err.message||err));
+    }
+  });
+
+  // events
+  refreshBtn.addEventListener("click", loadIdeas);
+  categorySelect.addEventListener("change", renderList);
+  searchEl.addEventListener("input", renderList);
+  sortEl.addEventListener("change", renderList);
+
+  // initial load (if adminKey already present)
+  if (adminKey) loadIdeas();
+</script>
 </body>
 </html>
-
-
-
-
-
-
